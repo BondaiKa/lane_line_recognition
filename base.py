@@ -12,6 +12,7 @@ LABELS = {
     1: (255, 0, 0),  # red
 }
 
+
 class MetaSingleton(type):
     """Metaclass for create singleton"""
 
