@@ -7,11 +7,10 @@ from typing import NamedTuple, Tuple
 
 log = logging.getLogger(__name__)
 
-
-class ColourLabel(NamedTuple):
-    red: Tuple[int] = (255, 0, 0),
-    green: Tuple[int] = (0, 255, 0),
-
+LABELS = {
+    0: (0, 255, 0),  # green
+    1: (255, 0, 0),  # red
+}
 
 class MetaSingleton(type):
     """Metaclass for create singleton"""
@@ -46,7 +45,7 @@ class AbstractVideoHandler(ABC):
 
 
 class FrameHandler(metaclass=MetaSingleton):
-    labels = ColourLabel
+    labels = LABELS
 
     def __init__(self):
         ###
