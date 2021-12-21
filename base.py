@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 class ColourLabel(NamedTuple):
     red: Tuple[int] = (255, 0, 0),
-    green: Tuple[int] = (0, 128, 0),
+    green: Tuple[int] = (0, 255, 0),
 
 
 class MetaSingleton(type):
