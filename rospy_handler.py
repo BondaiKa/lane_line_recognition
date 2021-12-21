@@ -8,6 +8,8 @@ BASE_CAMERA_NUMBER = 2
 
 
 class RospyVideoHandler(AbstractVideoHandler):
+    """Using real-time video and do lane line recognition"""
+
     def __init__(self, camera_path: Union[str, int] = BASE_CAMERA_NUMBER,
                  init_node: str = "points_publisher",
                  publisher: str = "/campoints"):

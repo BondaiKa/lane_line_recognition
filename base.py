@@ -3,9 +3,14 @@ from abc import ABC
 from typing import Union
 import cv2
 import numpy as np
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 log = logging.getLogger(__name__)
+
+
+class ColourLabel(NamedTuple):
+    red: Tuple[int] = (255, 0, 0),
+    green: Tuple[int] = (0, 128, 0),
 
 
 class MetaSingleton(type):
@@ -41,10 +46,7 @@ class AbstractVideoHandler(ABC):
 
 
 class FrameHandler(metaclass=MetaSingleton):
-    LABELS = NamedTuple(
-        red=(255, 0, 0),
-        green=(0, 128, 0),
-    )
+    labels = ColourLabel
 
     def __init__(self):
         ###
@@ -64,11 +66,11 @@ class FrameHandler(metaclass=MetaSingleton):
         ###
 
     @staticmethod
-    def recognize(frame: np.ndarray):
-        ...
+    def recognize(frame: np.ndarray) -> np.ndarray:
         ###
         # TODO @Karim: add process image by NN
         ###
+        ...
 
     @classmethod
     def get_colour(cls, labels):
