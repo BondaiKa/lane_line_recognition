@@ -1,7 +1,7 @@
 import logging
 import os
 
-from video_handler import RosVideoHandler, FakeVideoMinimumLaneLineRecognition
+from fake_video_handler import RosVideoHandler, FakeVideoMinimumLaneLineRecognition
 
 log = logging.getLogger(__name__)
 logging.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=logging.DEBUG)
