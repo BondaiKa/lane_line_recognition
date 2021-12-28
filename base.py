@@ -57,11 +57,10 @@ def draw_sequence_in_img(frame: np.ndarray, points: List[Tuple[int, int]], color
     cv2.imshow(f"Frame_with_points_{color[0]}_{color[1]}_{color[2]}", frame_points)
 
 
-def calculate_perspective_transform_matrix(frame: np.ndarray, width: int, height: int, reverse_flag=False) -> Tuple[
+def calculate_perspective_transform_matrix(width: int, height: int, reverse_flag=False) -> Tuple[
     np.ndarray]:
     """
-    Calculate transofmration matrix for perspective transformation
-    :param frame: one readed frame in video flow
+    Calculate transformation matrix for perspective transformation
     :param width: frame width
     :param height: frame height
     :param reverse_flag: create reverse matrix for reverting to initial frame
@@ -100,10 +99,10 @@ class FrameHandler(metaclass=MetaSingleton):
         frame = cv2.resize(frame, dsize=(width, height), interpolation=cv2.INTER_AREA)
         # log.debug(f"After resizing {frame.shape}")
         # cv2.imshow('Resized frame', frame)
-        initial_matrix = calculate_perspective_transform_matrix(frame, width, height)
+        initial_matrix = calculate_perspective_transform_matrix(width, height)
         presp_frame = cv2.warpPerspective(frame, initial_matrix, dsize=(width, height))
         cv2.imshow('Perspective_tranform_frame', presp_frame)
-        final_matrix = calculate_perspective_transform_matrix(frame, width, height, reverse_flag=True)
+        final_matrix = calculate_perspective_transform_matrix(width, height, reverse_flag=True)
         reversed_frame = cv2.warpPerspective(frame, final_matrix, dsize=(width, height))
         return reversed_frame
 
