@@ -84,7 +84,7 @@ def transform_frame(frame: np.ndarray, width: int, height: int, reverse_flag=Fal
     :param frame: frame
     :param width: frame width
     :param height: frame height
-    :reverse_flag: cancel perspective transformation
+    :param reverse_flag: cancel perspective transformation
     :return: changed (un)transformed frame
     """
     if not reverse_flag:
@@ -106,7 +106,7 @@ class FrameHandler(metaclass=MetaSingleton):
         ...
 
     @staticmethod
-    def preprocess_frame(frame: np.ndarray, width, height):
+    def preprocess_frame(frame: np.ndarray, width: int, height: int):
         ###
         # TODO @Karim: add perspective transformation
         ###
