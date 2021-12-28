@@ -3,7 +3,7 @@ from abc import ABC
 from typing import Union
 import cv2
 import numpy as np
-from typing import NamedTuple, Tuple
+from typing import NamedTuple, Tuple, List
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +45,39 @@ class AbstractVideoHandler(ABC):
         log.info("End video processing...")
 
 
+# TODO @Karim: remove after debugging perspective_transformation
+def draw_sequence_in_img(frame: np.ndarray, points: List[Tuple[int, int]], color: Tuple[int, int, int]) -> None:
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale = thickness = 3
+    lineType = 2
+    frame_points = frame.copy()
+    for num, point in enumerate(points):
+        frame_points = cv2.putText(frame_points, str(num + 1), point, font, fontScale, color, thickness,
+                                   lineType)
+    cv2.imshow(f"Frame_with_points_{color[0]}_{color[1]}_{color[2]}", frame_points)
+
+
+def calculate_perspective_transform_matrix(frame: np.ndarray, width: int, height: int, reverse_flag=False) -> Tuple[
+    np.ndarray]:
+    """
+    Calculate transofmration matrix for perspective transformation
+    :param frame: one readed frame in video flow
+    :param width: frame width
+    :param height: frame height
+    :param reverse_flag: create reverse matrix for reverting to initial frame
+    :return: matrix for transformation the frame
+    """
+    high_left_crd, high_right_crd = (550, 530), (700, 530)
+    down_left_crd, down_right_crd, = (0, height - 150), (width, height - 150)
+
+    initial_matrix = np.float32([[high_left_crd, high_right_crd,
+                                  down_left_crd, down_right_crd]])
+    final_matrix = np.float32([[(0, 0), (width, 0), (0, height), (width, height)]])
+
+    return cv2.getPerspectiveTransform(initial_matrix, final_matrix) \
+        if not reverse_flag else cv2.getPerspectiveTransform(final_matrix, initial_matrix)
+
+
 class FrameHandler(metaclass=MetaSingleton):
     labels = LABELS
 
@@ -55,8 +88,7 @@ class FrameHandler(metaclass=MetaSingleton):
         ...
 
     @staticmethod
-    def preprocess_frame(frame: np.ndarray):
-        ...
+    def preprocess_frame(frame: np.ndarray, width, height):
         ###
         # TODO @Karim: add perspective transformation
         ###
@@ -64,6 +96,16 @@ class FrameHandler(metaclass=MetaSingleton):
         ###
         # TODO @Karim: apply filter
         ###
+        log.debug(f"Before resizing: width {width}, Height {height}, Frame shape:{frame.shape}")
+        frame = cv2.resize(frame, dsize=(width, height), interpolation=cv2.INTER_AREA)
+        # log.debug(f"After resizing {frame.shape}")
+        # cv2.imshow('Resized frame', frame)
+        initial_matrix = calculate_perspective_transform_matrix(frame, width, height)
+        presp_frame = cv2.warpPerspective(frame, initial_matrix, dsize=(width, height))
+        cv2.imshow('Perspective_tranform_frame', presp_frame)
+        final_matrix = calculate_perspective_transform_matrix(frame, width, height, reverse_flag=True)
+        reversed_frame = cv2.warpPerspective(frame, final_matrix, dsize=(width, height))
+        return reversed_frame
 
     @staticmethod
     def recognize(frame: np.ndarray) -> np.ndarray:

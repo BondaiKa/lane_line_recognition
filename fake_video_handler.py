@@ -11,14 +11,20 @@ class FakeVideoHandler(AbstractVideoHandler):
     def process(self):
         """Process image with filter and transform image"""
         log.info('Start fake video processing...')
-        while self.video.isOpened():
+        while self.video.isOpened(): #TODO @Karim revert to full video not 1 frame
             ret, frame_dis = self.video.read()
-
-            # frame_handler = FrameHandler()
-            # frame = frame_handler.preprocess_frame(frame=frame_dis)
+            cv2.imshow(f'initial_{frame_dis.shape}', frame_dis)
+            # width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+            # height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            width, height = 1280, 960
+            log.debug(f"Input resolution params: Width: {width}, height: {height}")
+            log.debug(f"Frame shape: {frame_dis.shape}")
+            frame_handler = FrameHandler()
+            frame = frame_handler.preprocess_frame(frame=frame_dis, width=width, height=height)
             # points, num_classes = frame_handler.recognize(frame=frame)
             # result = frame_handler.draw_popylines(frame=frame, points=points, labels=num_classes)
-            cv2.imshow('cap', frame_dis)
-            cv2.waitKey(0)
+            cv2.imshow(f'Final frame_{frame.shape}', frame)
+            cv2.waitKey(1)
+
         log.info("Destroy all windows...")
         cv2.destroyAllWindows()

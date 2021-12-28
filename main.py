@@ -3,7 +3,7 @@ import logging
 from fake_video_handler import FakeVideoHandler
 
 log = logging.getLogger(__name__)
-logging.basicConfig(format="[%(asctime)s] [%(levelname)s] %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="[%(asctime)s] [%(levelname)s] [%(funcName)s] %(message)s", level=logging.DEBUG)
 
 CAMERA_PATH = "../dataset/IMG_0261.MOV"
 
