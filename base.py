@@ -66,6 +66,7 @@ def calculate_perspective_transform_matrix(width: int, height: int, reverse_flag
     :param reverse_flag: create reverse matrix for reverting to initial frame
     :return: matrix for transformation the frame
     """
+    # TODO @Karim: check on real Audi Q2 input frame
     high_left_crd, high_right_crd = (550, 530), (700, 530)
     down_left_crd, down_right_crd, = (0, height - 150), (width, height - 150)
 
@@ -75,6 +76,24 @@ def calculate_perspective_transform_matrix(width: int, height: int, reverse_flag
 
     return cv2.getPerspectiveTransform(initial_matrix, final_matrix) \
         if not reverse_flag else cv2.getPerspectiveTransform(final_matrix, initial_matrix)
+
+
+def transform_frame(frame: np.ndarray, width: int, height: int, reverse_flag=False) -> np.ndarray:
+    """
+    Perform perspective transformation
+    :param frame: frame
+    :param width: frame width
+    :param height: frame height
+    :reverse_flag: cancel perspective transformation
+    :return: changed (un)transformed frame
+    """
+    if not reverse_flag:
+        initial_matrix = calculate_perspective_transform_matrix(width, height)
+        frame = cv2.warpPerspective(frame, initial_matrix, dsize=(width, height))
+    else:
+        final_matrix = calculate_perspective_transform_matrix(width, height, reverse_flag=True)
+        frame = cv2.warpPerspective(frame, final_matrix, dsize=(width, height))
+    return frame
 
 
 class FrameHandler(metaclass=MetaSingleton):
@@ -99,11 +118,9 @@ class FrameHandler(metaclass=MetaSingleton):
         frame = cv2.resize(frame, dsize=(width, height), interpolation=cv2.INTER_AREA)
         # log.debug(f"After resizing {frame.shape}")
         # cv2.imshow('Resized frame', frame)
-        initial_matrix = calculate_perspective_transform_matrix(width, height)
-        presp_frame = cv2.warpPerspective(frame, initial_matrix, dsize=(width, height))
+        presp_frame = transform_frame(frame, width, height)
         cv2.imshow('Perspective_tranform_frame', presp_frame)
-        final_matrix = calculate_perspective_transform_matrix(width, height, reverse_flag=True)
-        reversed_frame = cv2.warpPerspective(frame, final_matrix, dsize=(width, height))
+        reversed_frame = transform_frame(frame, width, height, reverse_flag=True)
         return reversed_frame
 
     @staticmethod
