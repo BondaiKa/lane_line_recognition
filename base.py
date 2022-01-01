@@ -119,7 +119,7 @@ class FrameHandler(metaclass=MetaSingleton):
         # log.debug(f"After resizing {frame.shape}")
         # cv2.imshow('Resized frame', frame)
         presp_frame = transform_frame(frame, width, height)
-        cv2.imshow('Perspective_tranform_frame', presp_frame)
+        cv2.imshow('Perspective_transform_frame', presp_frame)
         reversed_frame = transform_frame(frame, width, height, reverse_flag=True)
         return reversed_frame
 
