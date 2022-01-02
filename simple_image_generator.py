@@ -18,17 +18,11 @@ JSON_PATH = BASE_DIR + "Json/"
 log = logging.getLogger(__name__)
 
 
-# Here, `x_set` is list of path to the images
-# and `y_set` are the associated classes.
-
-# Every Sequence must implement the __getitem__ and the __len__ methods.
-# If you want to modify your dataset between epochs you may implement
-# on_epoch_end. The method __getitem__ should return a complete batch.
-
 class SimpleFrameGenerator(Sequence):
     """Sequence of frames generator
 
-    Usage for independent frames without context window etc
+    Usage for training NN that could process independent
+    frames without context window etc
     """
 
     def __init__(self,
