@@ -2,8 +2,9 @@ from skimage.io import imread
 from skimage.transform import resize
 import numpy as np
 import math
-from typing import Optional, List
+from typing import Tuple, List, Dict
 import glob
+import json
 
 from tensorflow.keras.utils import Sequence
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -31,7 +32,7 @@ class VideoFrameGenerator(Sequence):
                  rescale=1 / 255.,  # todo canny operator etc
                  nbframe: int = 4,
                  batch_size: int = 64,
-                 target_shape: tuple = (1280, 960),
+                 target_shape: Tuple[int, int] = (1280, 960),
                  shuffle: bool = True,
                  transformation: ImageDataGenerator = None,
                  split: float = None,  # todo: wtf?
@@ -70,35 +71,55 @@ class VideoFrameGenerator(Sequence):
         # build indexes
         self.files = glob.glob(frame_glob_path)
         self.files_count = len(self.files)
-        self.indexes = np.arange(self.files_count)
-        self.polylines = glob.glob(json_glob_path)
+
+        self.json_files = glob.glob(json_glob_path)
+        self.num_json_files = len(self.json_files)
 
         log.info(f"Number of files: {self.files_count}.")
 
-        if self.files_count != len(self.polylines):
+        if self.files_count != self.num_json_files:
             log.error(f"Datasaet files error"
-                      f"Number of frames: ({self.files_count}). Number of jsons({len(self.polylines)})")
+                      f"Number of frames: ({self.files_count}). Number of jsons({self.num_json_files})")
             raise FileNotFoundError(
                 f"Numbers of frames and jsons are not equal!")
 
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
-    def __getitem__(self, idx):
-        previous_frames = None
-        diff = self.nbframe - idx - 1
-        if diff > 0:
+    def __get_polyline_from_file(self, json_path) -> map:
+        """
+        Get all Polygonal chains from json file
+        :param json_path: path of json file
+        :return: right points for frame
+        """
+        with open(json_path) as f:
+            polylines: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
+            # TODO @Karim: check another params in json files like "occlusion"
+            return map(lambda x: x["points"], polylines)
 
-            #TODO: @Karim include batch
-            #TODO @Karim: check that diff video frames will not be included in one input (batch or input ????)
-            previous_frames = np.zeros(shape=(diff * self.target_shape[0] * self.target_shape[1]))
-        else:
+    def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
+        # previous_frames = None
+        # diff = self.nbframe - idx - 1
+        # if diff > 0:
+        #################################################
+        # TODO @Karim: remove cnn-lstm preparation code
+        #################################################
+        # TODO: @Karim include batch
+        # TODO @Karim: check that diff video frames will not be included in one input (batch or input ????)
+        # previous_frames = np.zeros(shape=(diff * self.target_shape[0] * self.target_shape[1]))
+        # else:
 
-        return  # np.array([num of images]), np.array(todo equal one json polyline)
-
-    def on_epoch_end(self):
-        """Method called at the end of every epoch."""
-        pass
+        batch_frames_path = self.files[idx * self.batch_size:
+                                       (idx + 1) * self.batch_size]
+        batch_json_path = self.json_files[idx * self.batch_size:
+                                          (idx + 1) * self.batch_size]
+        polylines = np.fromiter(map(lambda x: self.__get_polyline_from_file(x),
+                                    batch_json_path))
+        # TODO @Karim: test that polylines relate to right frames
+        # TODO @Karim: add lines type retrieving
+        return np.array([
+            resize(imread(file_name), self.target_shape) for file_name in batch_frames_path]
+        ), polylines
 
 
 if __name__ == "__main__":
