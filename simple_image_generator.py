@@ -1,3 +1,5 @@
+import itertools
+
 from skimage.io import imread
 from skimage.transform import resize
 import numpy as np
@@ -6,6 +8,7 @@ from typing import Tuple, List, Dict, Iterable
 import glob
 import json
 
+from itertools import chain
 from tensorflow.keras.utils import Sequence
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from utils import one_hot_list_encoder
@@ -27,17 +30,19 @@ class SimpleFrameGenerator(Sequence):
 
     def __init__(self,
                  num_type_of_lines=2,
+                 max_num_points=91,
                  rescale=1 / 255.,  # todo canny operator etc
                  nbframe: int = 4,
                  batch_size: int = 64,
                  target_shape: Tuple[int, int] = (1280, 960),
                  shuffle: bool = True,
                  transformation: ImageDataGenerator = None,
-                 split: float = None,  # todo: wtf?
+                 split: float = None,
                  nb_channel: int = 3,  # todo: read about this param
                  frame_glob_path: str = "",
                  json_glob_path: str = ""):
         """
+        :param max_num_points: maximum number of points un one polyline
         :param num_type_of_lines: number of possible lines on road
         :param rescale:
         :param nbframe: number of frame to return for each sequence
@@ -51,6 +56,7 @@ class SimpleFrameGenerator(Sequence):
         :param json_glob_path: glob pattern path of jsons
         """
 
+        self.max_num_points = max_num_points
         self.num_type_of_lines = num_type_of_lines
         self.rescale = rescale
         self.batch_size = batch_size
@@ -86,6 +92,13 @@ class SimpleFrameGenerator(Sequence):
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
+    def __get_polyline_with_label(self, lane: dict) -> np.ndarray:
+        """Get array from points list"""
+        res = np.array(
+            lane["points"]).flatten()
+        res = np.pad(res, pad_width=(0, self.max_num_points * 2 - res.shape[0]))
+        return np.hstack((res, one_hot_list_encoder(lane.get('label', 0), self.num_type_of_lines)))
+
     def __get_polyline_from_file(self, json_path) -> np.ndarray:
         """
         Get all Polygonal chains from json file
@@ -95,9 +108,8 @@ class SimpleFrameGenerator(Sequence):
         with open(json_path) as f:
             polylines: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
             # TODO @Karim: check another params in json files like "occlusion"
-            return np.array(list(map(lambda x: np.array(
-                x["points"] + (one_hot_list_encoder(x.get('label', 0), self.num_type_of_lines))).flatten(),
-                                     polylines)))
+            res = np.vstack(list(map(lambda lane: self.__get_polyline_with_label(lane=lane), polylines)))
+            return res
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
         # previous_frames = None
@@ -127,3 +139,6 @@ if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_glob_path = JSON_PATH + '/*/*.json'
     frame_generator = SimpleFrameGenerator(frame_glob_path=image_glob_path, json_glob_path=json_glob_path)
+
+    for item in frame_generator:
+        print(item)
