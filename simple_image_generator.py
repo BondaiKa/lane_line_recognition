@@ -1,16 +1,12 @@
-import itertools
-
 from skimage.io import imread
 from skimage.transform import resize
 import numpy as np
 import math
-from typing import Tuple, List, Dict, Iterable
+from typing import Tuple, List, Dict
 import glob
 import json
 
-from itertools import chain
 from tensorflow.keras.utils import Sequence
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from utils import one_hot_list_encoder
 import logging
 
@@ -31,17 +27,18 @@ class SimpleFrameGenerator(Sequence):
     def __init__(self,
                  num_type_of_lines=2,
                  max_num_points=91,
+                 max_lines_per_frame=6,
                  rescale=1 / 255.,  # todo canny operator etc
                  nbframe: int = 4,
                  batch_size: int = 64,
                  target_shape: Tuple[int, int] = (1280, 960),
                  shuffle: bool = True,
-                 transformation: ImageDataGenerator = None,
                  split: float = None,
                  nb_channel: int = 3,  # todo: read about this param
                  frame_glob_path: str = "",
                  json_glob_path: str = ""):
         """
+        :param max_lines_per_frame: maxinum number of lines per frame
         :param max_num_points: maximum number of points un one polyline
         :param num_type_of_lines: number of possible lines on road
         :param rescale:
@@ -49,13 +46,13 @@ class SimpleFrameGenerator(Sequence):
         :param batch_size: batch size of the dataset
         :param target_shape: final size for NN input
         :param shuffle: shuffle flag of frames sequences
-        :param transformation: ImageDataGenerator
         :param split: split dataset to train/test
         :param nb_channel: grayscaled or RGB frames
         :param frame_glob_path: glob pattern of frames
         :param json_glob_path: glob pattern path of jsons
         """
 
+        self.max_lines_per_frame = max_lines_per_frame
         self.max_num_points = max_num_points
         self.num_type_of_lines = num_type_of_lines
         self.rescale = rescale
@@ -64,7 +61,6 @@ class SimpleFrameGenerator(Sequence):
         self.shuffle = shuffle
         self.target_shape = target_shape
         self.nb_channel = nb_channel
-        self.transformation = transformation
 
         ######
         # TODO split data to train and test dataset
@@ -97,7 +93,8 @@ class SimpleFrameGenerator(Sequence):
         res = np.array(
             lane["points"]).flatten()
         res = np.pad(res, pad_width=(0, self.max_num_points * 2 - res.shape[0]))
-        return np.hstack((res, one_hot_list_encoder(lane.get('label', 0), self.num_type_of_lines)))
+        res = np.hstack((res, one_hot_list_encoder(lane.get('label', 0), self.num_type_of_lines)))
+        return res
 
     def __get_polyline_from_file(self, json_path) -> np.ndarray:
         """
@@ -109,7 +106,9 @@ class SimpleFrameGenerator(Sequence):
             polylines: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
             # TODO @Karim: check another params in json files like "occlusion"
             res = np.vstack(list(map(lambda lane: self.__get_polyline_with_label(lane=lane), polylines)))
-            return res
+            empty_lines = np.zeros(
+                shape=(self.max_lines_per_frame - res.shape[0], self.max_num_points * 2 + self.num_type_of_lines))
+            return np.vstack((res, empty_lines))
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
         # previous_frames = None
@@ -141,4 +140,4 @@ if __name__ == "__main__":
     frame_generator = SimpleFrameGenerator(frame_glob_path=image_glob_path, json_glob_path=json_glob_path)
 
     for item in frame_generator:
-        print(item)
+        print([x.shape for x in item[1]])
