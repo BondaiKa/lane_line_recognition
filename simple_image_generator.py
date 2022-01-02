@@ -2,18 +2,18 @@ from skimage.io import imread
 from skimage.transform import resize
 import numpy as np
 import math
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Iterable
 import glob
 import json
 
 from tensorflow.keras.utils import Sequence
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from utils import one_hot_list_encoder
+import logging
 
 BASE_DIR = "VIL100/"
 IMAGE_PATH = BASE_DIR + "JPEGImages/"
 JSON_PATH = BASE_DIR + "Json/"
-
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -25,10 +25,14 @@ log = logging.getLogger(__name__)
 # If you want to modify your dataset between epochs you may implement
 # on_epoch_end. The method __getitem__ should return a complete batch.
 
-class VideoFrameGenerator(Sequence):
-    """Sequence of frames generator"""
+class SimpleFrameGenerator(Sequence):
+    """Sequence of frames generator
+
+    Usage for independent frames without context window etc
+    """
 
     def __init__(self,
+                 num_type_of_lines=2,
                  rescale=1 / 255.,  # todo canny operator etc
                  nbframe: int = 4,
                  batch_size: int = 64,
@@ -40,6 +44,7 @@ class VideoFrameGenerator(Sequence):
                  frame_glob_path: str = "",
                  json_glob_path: str = ""):
         """
+        :param num_type_of_lines: number of possible lines on road
         :param rescale:
         :param nbframe: number of frame to return for each sequence
         :param batch_size: batch size of the dataset
@@ -52,6 +57,7 @@ class VideoFrameGenerator(Sequence):
         :param json_glob_path: glob pattern path of jsons
         """
 
+        self.num_type_of_lines = num_type_of_lines
         self.rescale = rescale
         self.batch_size = batch_size
         self.nbframe = nbframe
@@ -86,7 +92,7 @@ class VideoFrameGenerator(Sequence):
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
-    def __get_polyline_from_file(self, json_path) -> map:
+    def __get_polyline_from_file(self, json_path) -> np.ndarray:
         """
         Get all Polygonal chains from json file
         :param json_path: path of json file
@@ -95,7 +101,9 @@ class VideoFrameGenerator(Sequence):
         with open(json_path) as f:
             polylines: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
             # TODO @Karim: check another params in json files like "occlusion"
-            return map(lambda x: x["points"], polylines)
+            return np.array(list(map(lambda x: np.array(
+                x["points"] + (one_hot_list_encoder(x.get('label', 0), self.num_type_of_lines))).flatten(),
+                                     polylines)))
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
         # previous_frames = None
@@ -113,16 +121,15 @@ class VideoFrameGenerator(Sequence):
                                        (idx + 1) * self.batch_size]
         batch_json_path = self.json_files[idx * self.batch_size:
                                           (idx + 1) * self.batch_size]
-        polylines = np.fromiter(map(lambda x: self.__get_polyline_from_file(x),
-                                    batch_json_path))
+        polylines = np.array(list(map(lambda x: self.__get_polyline_from_file(x),
+                                      batch_json_path)))
         # TODO @Karim: test that polylines relate to right frames
-        # TODO @Karim: add lines type retrieving
         return np.array([
-            resize(imread(file_name), self.target_shape) for file_name in batch_frames_path]
+            resize(imread(file_name) * self.rescale, self.target_shape) for file_name in batch_frames_path]
         ), polylines
 
 
 if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_glob_path = JSON_PATH + '/*/*.json'
-    frame_generator = VideoFrameGenerator(frame_glob_path=image_glob_path, json_glob_path=json_glob_path)
+    frame_generator = SimpleFrameGenerator(frame_glob_path=image_glob_path, json_glob_path=json_glob_path)
