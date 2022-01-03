@@ -2,9 +2,10 @@ from skimage.io import imread
 from skimage.transform import resize
 import numpy as np
 import math
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Optional
 import glob
 import json
+import random
 
 from tensorflow.keras.utils import Sequence
 from utils import one_hot_list_encoder
@@ -29,11 +30,10 @@ class SimpleFrameGenerator(Sequence):
                  max_num_points=91,
                  max_lines_per_frame=6,
                  rescale=1 / 255.,  # todo canny operator etc
-                 nbframe: int = 4,
                  batch_size: int = 64,
                  target_shape: Tuple[int, int] = (1280, 960),
-                 shuffle: bool = True,
-                 split: float = None,
+                 shuffle: bool = False,
+                 split: Optional[float] = None,
                  nb_channel: int = 3,  # todo: read about this param
                  frame_glob_path: str = "",
                  json_glob_path: str = ""):
@@ -42,7 +42,6 @@ class SimpleFrameGenerator(Sequence):
         :param max_num_points: maximum number of points un one polyline
         :param num_type_of_lines: number of possible lines on road
         :param rescale:
-        :param nbframe: number of frame to return for each sequence
         :param batch_size: batch size of the dataset
         :param target_shape: final size for NN input
         :param shuffle: shuffle flag of frames sequences
@@ -57,24 +56,14 @@ class SimpleFrameGenerator(Sequence):
         self.num_type_of_lines = num_type_of_lines
         self.rescale = rescale
         self.batch_size = batch_size
-        self.nbframe = nbframe
         self.shuffle = shuffle
         self.target_shape = target_shape
         self.nb_channel = nb_channel
 
-        ######
-        # TODO split data to train and test dataset
-        ######
-
-        ######
-        # TODO: shuffle dataset
-        ######
-
-        # build indexes
-        self.files = glob.glob(frame_glob_path)
+        self.files = sorted(glob.glob(frame_glob_path))
         self.files_count = len(self.files)
 
-        self.json_files = glob.glob(json_glob_path)
+        self.json_files = sorted(glob.glob(json_glob_path))
         self.num_json_files = len(self.json_files)
 
         log.info(f"Number of files: {self.files_count}.")
@@ -84,6 +73,20 @@ class SimpleFrameGenerator(Sequence):
                       f"Number of frames: ({self.files_count}). Number of jsons({self.num_json_files})")
             raise FileNotFoundError(
                 f"Numbers of frames and jsons are not equal!")
+
+        if split and 0.0 < split < 1.0:
+            ######
+            # TODO split data to train and test dataset
+            ######
+            self.files_count = int(split * self.files_count)
+            self.files = self.files[:self.files_count]
+            self.json_files = self.json_files[:self.files_count]
+
+        if shuffle:
+            temp = list(zip(self.files, self.json_files))
+            random.shuffle(temp)
+            self.files, self.json_files = zip(*temp)
+            del temp
 
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
@@ -137,7 +140,8 @@ class SimpleFrameGenerator(Sequence):
 if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_glob_path = JSON_PATH + '/*/*.json'
-    frame_generator = SimpleFrameGenerator(frame_glob_path=image_glob_path, json_glob_path=json_glob_path)
+    frame_generator = SimpleFrameGenerator(frame_glob_path=image_glob_path, json_glob_path=json_glob_path,
+                                           split=0.8, shuffle=False)
 
     for item in frame_generator:
         print([x.shape for x in item[1]])
