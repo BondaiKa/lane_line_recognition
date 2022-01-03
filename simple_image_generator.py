@@ -66,8 +66,6 @@ class SimpleFrameGenerator(Sequence):
         self.json_files = sorted(glob.glob(json_glob_path))
         self.num_json_files = len(self.json_files)
 
-        log.info(f"Number of files: {self.files_count}.")
-
         if self.files_count != self.num_json_files:
             log.error(f"Datasaet files error"
                       f"Number of frames: ({self.files_count}). Number of jsons({self.num_json_files})")
@@ -82,11 +80,13 @@ class SimpleFrameGenerator(Sequence):
             self.files = self.files[:self.files_count]
             self.json_files = self.json_files[:self.files_count]
 
+        # TODO @Karim: test shuffle and split together
         if shuffle:
             temp = list(zip(self.files, self.json_files))
             random.shuffle(temp)
             self.files, self.json_files = zip(*temp)
-            del temp
+
+        log.info(f"Number of files: {self.files_count}.")
 
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
