@@ -99,7 +99,7 @@ class SimpleFrameGenerator(Sequence):
         res = np.hstack((res, one_hot_list_encoder(lane.get('label', 0), self.num_type_of_lines)))
         return res
 
-    def __get_polyline_from_file(self, json_path) -> np.ndarray:
+    def __get_polyline_from_file(self, json_path: str) -> np.ndarray:
         """
         Get all Polygonal chains from json file
         :param json_path: path of json file
