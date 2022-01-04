@@ -29,11 +29,11 @@ class SimpleFrameGenerator(Sequence):
                  num_type_of_lines=2,
                  max_num_points=91,
                  max_lines_per_frame=6,
-                 rescale=1 / 255.,  # todo canny operator etc
+                 rescale=1 / 255., # TODO @Karim: include and use later
                  batch_size: int = 64,
                  target_shape: Tuple[int, int] = (1280, 960),
                  shuffle: bool = False,
-                 nb_channel: int = 3,  # todo: read about this param
+                 nb_channel: int = 3,  # TODO: Use rgb later
                  files: Optional[List[str]] = None,
                  json_files: Optional[List[str]] = None):
         """
@@ -93,17 +93,6 @@ class SimpleFrameGenerator(Sequence):
             return np.vstack((res, empty_lines))
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
-        # previous_frames = None
-        # diff = self.nbframe - idx - 1
-        # if diff > 0:
-        #################################################
-        # TODO @Karim: remove cnn-lstm preparation code
-        #################################################
-        # TODO: @Karim include batch
-        # TODO @Karim: check that diff video frames will not be included in one input (batch or input ????)
-        # previous_frames = np.zeros(shape=(diff * self.target_shape[0] * self.target_shape[1]))
-        # else:
-
         batch_frames_path = self.files[idx * self.batch_size:
                                        (idx + 1) * self.batch_size]
         batch_json_path = self.json_files[idx * self.batch_size:
