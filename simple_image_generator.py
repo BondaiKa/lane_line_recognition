@@ -29,7 +29,7 @@ class SimpleFrameGenerator(Sequence):
                  num_type_of_lines=2,
                  max_num_points=91,
                  max_lines_per_frame=6,
-                 rescale=1 / 255., # TODO @Karim: include and use later
+                 rescale=1 / 255.,  # TODO @Karim: include and use later
                  batch_size: int = 64,
                  target_shape: Tuple[int, int] = (1280, 960),
                  shuffle: bool = False,
@@ -131,7 +131,7 @@ class SimpleFrameDataGen:
         self.__frame_glob_path = frame_glob_path
         self.__json_glob_path = json_glob_path
 
-    def flow_from_directory(self, subset: str = 'training',
+    def flow_from_directory(self, subset: str = TRAINING,
                             shuffle: bool = True, *args, **kwargs) -> SimpleFrameGenerator:
         """
         Get generator for subset
