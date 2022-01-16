@@ -30,7 +30,7 @@ class SimpleFrameGenerator(Sequence):
                  max_num_points=91,
                  max_lines_per_frame=6,
                  rescale=1 / 255.,  # TODO @Karim: include and use later
-                 batch_size: int = 64,
+                 batch_size: int = 8,
                  target_shape: Tuple[int, int] = (1280, 960),
                  shuffle: bool = False,
                  nb_channel: int = 3,  # TODO: Use rgb later
@@ -86,11 +86,16 @@ class SimpleFrameGenerator(Sequence):
         """
         with open(json_path) as f:
             polylines: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
-            # TODO @Karim: check another params in json files like "occlusion"
-            res = np.vstack(list(map(lambda lane: self.__get_polyline_with_label(lane=lane), polylines)))
-            empty_lines = np.zeros(
-                shape=(self.max_lines_per_frame - res.shape[0], self.max_num_points * 2 + self.num_type_of_lines))
-            return np.vstack((res, empty_lines))
+            if polylines:
+                # TODO @Karim: check another params in json files like "occlusion"
+                res = np.vstack(list(map(lambda lane: self.__get_polyline_with_label(lane=lane), polylines)))
+                empty_lines = np.zeros(
+                    shape=(self.max_lines_per_frame - res.shape[0], self.max_num_points * 2 + self.num_type_of_lines),
+                    dtype=np.float32)
+                return np.vstack(
+                    (res, empty_lines)).flatten()  # todo: rewrite to return flatten 1, 284 * 6 without flatten
+            else:
+                return np.zeros(shape=(self.max_lines_per_frame * (self.max_num_points * 2 + self.num_type_of_lines)))
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
         batch_frames_path = self.files[idx * self.batch_size:
@@ -100,8 +105,7 @@ class SimpleFrameGenerator(Sequence):
         polylines = np.array(list(map(lambda x: self.__get_polyline_from_file(x),
                                       batch_json_path)))
         return np.array([
-            resize(imread(file_name) * self.rescale, self.target_shape) for file_name in batch_frames_path]
-        ), polylines
+            resize(imread(file_name) * self.rescale, self.target_shape) for file_name in batch_frames_path]), polylines
 
 
 class SimpleFrameDataGen:
