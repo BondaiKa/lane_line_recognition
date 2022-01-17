@@ -21,9 +21,9 @@ class FakeVideoHandler(AbstractVideoHandler):
             log.debug(f"Frame shape: {frame_dis.shape}")
             frame_handler = FrameHandler()
             frame = frame_handler.preprocess_frame(frame=frame_dis, width=width, height=height)
-            # points, num_classes = frame_handler.recognize(frame=frame)
-            # result = frame_handler.draw_popylines(frame=frame, points=points, labels=num_classes)
-            cv2.imshow(f'Final frame_{frame.shape}', frame)
+            polylines, labels = frame_handler.recognize(frame=frame)
+            result = frame_handler.draw_popylines(frame=frame, points=polylines, labels=labels)
+            cv2.imshow(f'Final frame_{result}', result)
             cv2.waitKey(1)
 
         log.info("Destroy all windows...")

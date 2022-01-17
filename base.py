@@ -4,6 +4,7 @@ from typing import Union
 import cv2
 import numpy as np
 from typing import NamedTuple, Tuple, List
+import tensorflow as tf
 
 log = logging.getLogger(__name__)
 
@@ -11,6 +12,8 @@ LABELS = {
     0: (0, 255, 0),  # green
     1: (255, 0, 0),  # red
 }
+
+NEURAL_NETWORK_MODEL_PATH = 'model/cnn-50-iterations.h5'
 
 
 class MetaSingleton(type):
@@ -124,11 +127,15 @@ class FrameHandler(metaclass=MetaSingleton):
         return reversed_frame
 
     @staticmethod
-    def recognize(frame: np.ndarray) -> np.ndarray:
+    def recognize(frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         ###
         # TODO @Karim: add process image by NN
         ###
-        ...
+        model = tf.keras.models.load_model(NEURAL_NETWORK_MODEL_PATH)
+        frame = frame.reshape(1, 1280, 960, 3)
+        log.debug(frame.shape)
+        results = model.predict(frame)
+        # return results.split(indices_or_sectionsint=[])
 
     @classmethod
     def get_colour(cls, labels):
