@@ -9,6 +9,7 @@ import random
 
 from tensorflow.keras.utils import Sequence
 from utils import one_hot_list_encoder
+from vil_100_utils import get_valid_attribute
 import logging
 
 BASE_DIR = "VIL100/"
@@ -26,7 +27,7 @@ class SimpleFrameGenerator(Sequence):
     """
 
     def __init__(self,
-                 num_type_of_lines=2,
+                 num_type_of_lines=11,
                  max_num_points=91,
                  max_lines_per_frame=6,
                  rescale=1 / 255.,  # TODO @Karim: include and use later
@@ -70,42 +71,67 @@ class SimpleFrameGenerator(Sequence):
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
-    def __get_polyline_with_label(self, lane: dict) -> np.ndarray:
+    def __get_polyline_with_label(self, lane: dict) -> Tuple[np.ndarray, np.ndarray]:
         """Get array from points list"""
-        res = np.array(
+        points = np.array(
             lane["points"]).flatten()
-        res = np.pad(res, pad_width=(0, self.max_num_points * 2 - res.shape[0]))
-        res = np.hstack((res, one_hot_list_encoder(lane.get('label', 0), self.num_type_of_lines)))
-        return res
+        points = np.pad(points, pad_width=(0, self.max_num_points * 2 - points.shape[0]))
+        # TODO @Karim: remember below `label.get(label)` is index 1,2,3,4
+        label = get_valid_attribute(lane.get('attribute', 1))
+        labels = one_hot_list_encoder(label, self.num_type_of_lines)
+        return points, labels
 
-    def __get_polyline_from_file(self, json_path: str) -> np.ndarray:
+    def __get_polyline_and_label_from_file(self, json_path: str) -> np.ndarray:
         """
-        Get all Polygonal chains from json file
+        Get all Polygonal chains from json file and label of line
         :param json_path: path of json file
         :return: right points for frame
         """
         with open(json_path) as f:
-            polylines: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
-            if polylines:
+            lanes: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
+            if lanes:
+                polylines, labels = list(), list()
                 # TODO @Karim: check another params in json files like "occlusion"
-                res = np.vstack(list(map(lambda lane: self.__get_polyline_with_label(lane=lane), polylines)))
-                empty_lines = np.zeros(
-                    shape=(self.max_lines_per_frame - res.shape[0], self.max_num_points * 2 + self.num_type_of_lines),
-                    dtype=np.float32)
-                return np.vstack(
-                    (res, empty_lines)).flatten()  # todo: rewrite to return flatten 1, 284 * 6 without flatten
-            else:
-                return np.zeros(shape=(self.max_lines_per_frame * (self.max_num_points * 2 + self.num_type_of_lines)))
+                for lane in lanes:
+                    points, label = self.__get_polyline_with_label(lane=lane)
+                    # TODO @Karim: debug
+                    points = np.hstack([points, np.zeros(shape=(self.max_num_points * 2 - points.shape[0]))])
+                    polylines.append(points)
+                    labels.append(label)
 
-    def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
+                polylines.append(np.zeros(
+                    shape=((self.max_lines_per_frame - len(polylines)) * self.max_num_points * 2)))
+
+                label_empty_list = [one_hot_list_encoder(0, self.num_type_of_lines) for x in
+                                    range(self.max_lines_per_frame - len(labels))]
+                if label_empty_list:
+                    labels.append(np.concatenate(label_empty_list))
+
+                return np.concatenate(polylines), np.concatenate(labels)
+            else:
+                empty_label = one_hot_list_encoder(0, self.num_type_of_lines)
+                polylines_empty_shape = self.max_lines_per_frame * self.max_num_points * 2
+                return np.zeros(shape=(polylines_empty_shape)), \
+                       np.tile(empty_label, (1, self.max_lines_per_frame))
+
+    def __getitem__(self, idx) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         batch_frames_path = self.files[idx * self.batch_size:
                                        (idx + 1) * self.batch_size]
         batch_json_path = self.json_files[idx * self.batch_size:
                                           (idx + 1) * self.batch_size]
-        polylines = np.array(list(map(lambda x: self.__get_polyline_from_file(x),
-                                      batch_json_path)))
+        polyline_list, label_list = list(), list()
+
+        for json in batch_json_path:
+            polylines, labels = self.__get_polyline_and_label_from_file(json)
+            polyline_list.append(polylines)
+            label_list.append(labels)
+
+        labels_output = np.vstack(label_list)
+        polylines_output = np.vstack(polyline_list)
+
         return np.array([
-            resize(imread(file_name) * self.rescale, self.target_shape) for file_name in batch_frames_path]), polylines
+            resize(imread(file_name) * self.rescale, self.target_shape) for file_name in
+            batch_frames_path]), (polylines_output, labels_output)
 
 
 class SimpleFrameDataGen:
@@ -187,9 +213,11 @@ if __name__ == "__main__":
     validation_generator = data_gen.flow_from_directory(subset='validation', shuffle=True)
 
     for item in train_generator:
-        print([x.shape for x in item[1]])
+        print(item[0].shape)
+        print(item[1][1].shape)
+        print(item[1][2].shape)
         break
 
-    for item in validation_generator:
-        print([x.shape for x in item[1]])
-        break
+    # for item in validation_generator:
+    #     print([x.shape for x in item[1]])
+    #     break
