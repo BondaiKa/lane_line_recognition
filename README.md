@@ -30,4 +30,4 @@ Name: Front Camera Basler daA1280-54uc
 ### FAQ :question:
 
 - If issue appears while installing opencv. Just remove wheel lib from requirements.txt
-- Current version requires connection to ithernet due to loading pretrained *InceptionResNetV2* model weights
+- Current version requires connection to Ethernet due to loading pretrained *InceptionResNetV2* model weights

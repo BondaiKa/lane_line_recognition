@@ -122,14 +122,15 @@ class FrameHandler(metaclass=MetaSingleton):
         return model, pre_trained_model
 
     def __init__(self, model_weights_path: str = '', width: int = 1280,
-                 height: int = 960, max_lines_per_frame: int = 8):
+                 height: int = 960, max_lines_per_frame: int = 8, max_num_points: int = 91):
         """
         :param model_weights_path:  neural net weights with h5 format path
         :param width: width of camera/desired frame
         :param height: height of camera/desired frame
         :param max_lines_per_frame: maximum num of lines in a frame
+        :param max_num_points: maximum number of points(x,y) per polylines
         """
-        model, pre_trained_model = self.__build_model(polyline_output_shape=91 * 2 * max_lines_per_frame,
+        model, pre_trained_model = self.__build_model(polyline_output_shape=max_num_points * 2 * max_lines_per_frame,
                                                       label_output_shape=max_lines_per_frame * 11)
         model.load_weights(model_weights_path)
         self.model = model
@@ -203,5 +204,5 @@ class FrameHandler(metaclass=MetaSingleton):
         ###
         for points, color in zip(list_of_points, list_of_colors):
             frame = cv2.polylines(frame, points, True, color, thickness=10)
-            cv2.imshow('Test_frame',frame)
+            cv2.imshow('Test_frame', frame)
         return frame

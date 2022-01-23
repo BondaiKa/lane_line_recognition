@@ -21,14 +21,15 @@ if __name__ == "__main__":
     CAMERA_HEIGHT = int(os.getenv('CAMERA_HEIGHT'))
     MAX_LINES_PER_FRAME = int(os.getenv('MAX_LINES_PER_FRAME'))
     MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
-    NUM_TYPE_OF_LINES =int( os.getenv('NUM_TYPE_OF_LINES'))
+    NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
 
     camera = FakeVideoHandler(camera_path=CAMERA_PATH)
     frame_handler = FrameHandler(
         model_weights_path=NEURAL_NETWORK_WEIGHTS_MODEL_PATH,
         width=CAMERA_WIDTH,
         height=CAMERA_HEIGHT,
-        max_lines_per_frame = MAX_LINES_PER_FRAME,
+        max_lines_per_frame=MAX_LINES_PER_FRAME,
+        max_num_points=MAX_NUM_POINTS,
     )
 
     camera.process(frame_handler=frame_handler)
