@@ -2,3 +2,5 @@
 lane_line
 .DS_Store
 /VIL100/
+*.h5
+*.env
