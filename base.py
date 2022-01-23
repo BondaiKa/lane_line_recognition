@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from typing import NamedTuple, Tuple, List
 import tensorflow as tf
+from vil_100_utils import get_colour_from_one_hot_vector
 
 log = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ LABELS = {
     1: (255, 0, 0),  # red
 }
 
-NEURAL_NETWORK_MODEL_PATH = 'model/cnn-50-iterations.h5'
+NEURAL_NETWORK_MODEL_PATH = 'model/multiple-output-model.h5'
 
 
 class MetaSingleton(type):
@@ -133,22 +134,53 @@ class FrameHandler(metaclass=MetaSingleton):
         ###
         model = tf.keras.models.load_model(NEURAL_NETWORK_MODEL_PATH)
         frame = frame.reshape(1, 1280, 960, 3)
-        log.debug(frame.shape)
-        results = model.predict(frame)
-        # return results.split(indices_or_sectionsint=[])
+        return model.predict(frame)
 
     @classmethod
-    def get_colour(cls, labels):
-        # TODO @Karim: transform number to colour
-        ...
+    def postprocess_frame(cls, polylines: np.ndarray, labels: np.ndarray) -> Tuple[List[np.ndarray]]:
+        """
+        Get Splitted polylines and labels values for 6 numpy arrays respectively
+
+        :param polylines:
+        :param labels:
+        :return:
+        """
+        polylines = np.hsplit(polylines, 6)
+        polylines = cls.filter_coordinates(polylines)
+        colors = cls.get_colour(np.hsplit(np.where(labels > 0.5, 1, 0), 6))
+        return zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors)))
 
     @classmethod
-    def draw_popylines(cls, frame: np.ndarray, points, labels: np.ndarray):
-        ...
+    def get_colour(cls, labels: List[np.ndarray]) -> List[Tuple[int, int, int]]:
+        """Get color from several line labels"""
+        return list(map(lambda one_hot_v: get_colour_from_one_hot_vector(one_hot_v), labels))
+
+    @classmethod
+    def filter_coordination_for_resolution(cls, polyline: np.ndarray) -> np.ndarray:
+        valid = ((polyline[:, 0] > 0) & (polyline[:, 1] > 0)
+                 & (polyline[:, 0] < 1280) & (polyline[:, 1] < 960))
+        return polyline[valid]
+
+    @classmethod
+    def filter_coordinates(cls, list_of_polylines: List[np.ndarray]) -> np.ndarray:
+        """Remove empty points and coordinates x or y, that is less than 0"""
+        list_of_polylines = list(map(lambda x: x.reshape(-1, 2), list_of_polylines))
+        return list(map(lambda polyline: cls.filter_coordination_for_resolution(polyline),
+                        list_of_polylines))
+
+    @classmethod
+    def draw_popylines(cls, frame: np.ndarray, list_of_points: List[np.ndarray],
+                       list_of_colors: List[np.ndarray]) -> np.ndarray:
+        """
+        draw polylines and labels to a frame
+        :param frame: input frame
+        :param list_of_points: list of polylines
+        :param list_of_labels: list of label that corresponds to list of polylines
+        :return:
+        """
         ###
         # TODO @Karim: try to understand `PoseArray` and further logic
         ###
-        colour = cls.get_colour()
-        # TODO @Karim: revert perspective points to normal
-        return np.apply_along_axis(cv2.polylines, axis=1, arr=points,
-                                   img=frame, isClosed=True, color=colour, thickness=2)
+        for points, color in zip(list_of_points, list_of_colors):
+            frame = cv2.polylines(frame, points, True, color, thickness=2)
+        return frame
