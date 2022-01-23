@@ -22,6 +22,9 @@ VIL_100_colour_line = {
     10: (255, 0, 0),  # double solid white and yellow
 }
 
+LANE_ID_FULL_LIST = set(range(1, 9))
+# LANE_ORDER = [7, 5, 3, 1, 2, 4, 6, 8]
+
 
 def get_valid_attribute(attr: int) -> int:
     return VIL_100_attributes.get(attr, attr)

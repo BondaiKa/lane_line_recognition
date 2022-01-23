@@ -3,18 +3,12 @@ from abc import ABC
 from typing import Union
 import cv2
 import numpy as np
-from typing import NamedTuple, Tuple, List
+from typing import Tuple, List
 import tensorflow as tf
 from vil_100_utils import get_colour_from_one_hot_vector
+from tensorflow.keras import layers, Model
 
 log = logging.getLogger(__name__)
-
-LABELS = {
-    0: (0, 255, 0),  # green
-    1: (255, 0, 0),  # red
-}
-
-NEURAL_NETWORK_MODEL_PATH = 'model/multiple-output-model.h5'
 
 
 class MetaSingleton(type):
@@ -101,43 +95,70 @@ def transform_frame(frame: np.ndarray, width: int, height: int, reverse_flag=Fal
 
 
 class FrameHandler(metaclass=MetaSingleton):
-    labels = LABELS
-
-    def __init__(self):
-        ###
-        # TODO @Karim: load nn weights etc
-        ###
-        ...
+    """Draw polyline and other necessary data to frame"""
 
     @staticmethod
-    def preprocess_frame(frame: np.ndarray, width: int, height: int):
-        ###
-        # TODO @Karim: add perspective transformation
-        ###
+    def __build_model(polyline_output_shape: int, label_output_shape: int, input_shape=(1280, 960, 3)):
+        pre_trained_model = tf.keras.applications.InceptionResNetV2(input_shape=input_shape,
+                                                                    weights='imagenet',
+                                                                    include_top=False)
 
+        global_max_pool = layers.GlobalMaxPool2D()(pre_trained_model.output)
+        dense_polyline = tf.keras.layers.Dense(units=512, activation='relu')(global_max_pool)
+        dropout_polyine = layers.Dropout(.2)(dense_polyline)
+        dense_polyline_2 = tf.keras.layers.Dense(units=512, activation='relu')(dropout_polyine)
+        dropout_polyine_2 = layers.Dropout(.2)(dense_polyline_2)
+
+        dense_label = tf.keras.layers.Dense(units=66, activation='relu')(global_max_pool)
+        dropout_label = layers.Dropout(.2)(dense_label)
+        dense_label_2 = tf.keras.layers.Dense(units=66, activation='relu')(dropout_label)
+        dropout_label_2 = layers.Dropout(.2)(dense_label_2)
+
+        polyline_output = layers.Dense(polyline_output_shape, name='polyline_output')(dropout_polyine_2)
+        label_output = layers.Dense(label_output_shape, activation='softmax', name='label_output')(dropout_label_2)
+
+        model = Model(pre_trained_model.input, outputs=[polyline_output, label_output])
+
+        return model, pre_trained_model
+
+    def __init__(self, model_weights_path: str = '', width: int = 1280,
+                 height: int = 960, max_lines_per_frame: int = 8):
+        """
+        :param model_weights_path:  neural net weights with h5 format path
+        :param width: width of camera/desired frame
+        :param height: height of camera/desired frame
+        :param max_lines_per_frame: maximum num of lines in a frame
+        """
+        model, pre_trained_model = self.__build_model(polyline_output_shape=91 * 2 * max_lines_per_frame,
+                                                      label_output_shape=max_lines_per_frame * 11)
+        model.load_weights(model_weights_path)
+        self.model = model
+        self.width = width
+        self.height = height
+        self.max_lines_per_frame = max_lines_per_frame
+
+    def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         ###
         # TODO @Karim: apply filter
         ###
-        log.debug(f"Before resizing: width {width}, Height {height}, Frame shape:{frame.shape}")
+        width, height = self.width, self.height
+
+        log.debug(f"Resizing frame to {width}x{height} resolution...")
         frame = cv2.resize(frame, dsize=(width, height), interpolation=cv2.INTER_AREA)
-        # log.debug(f"After resizing {frame.shape}")
-        # cv2.imshow('Resized frame', frame)
-        presp_frame = transform_frame(frame, width, height)
-        cv2.imshow('Perspective_transform_frame', presp_frame)
-        reversed_frame = transform_frame(frame, width, height, reverse_flag=True)
-        return reversed_frame
+        # TODO @Karim: rescale frame to 1 / 255.
+        frame = frame / 255
+        # TODO @Karim use transform later
+        # presp_frame = transform_frame(frame, width, height)
+        # cv2.imshow('Perspective_transform_frame', presp_frame)
 
-    @staticmethod
-    def recognize(frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        ###
-        # TODO @Karim: add process image by NN
-        ###
-        model = tf.keras.models.load_model(NEURAL_NETWORK_MODEL_PATH)
-        frame = frame.reshape(1, 1280, 960, 3)
-        return model.predict(frame)
+        # return transform_frame(frame, width, height, reverse_flag=True)
+        return frame
 
-    @classmethod
-    def postprocess_frame(cls, polylines: np.ndarray, labels: np.ndarray) -> Tuple[List[np.ndarray]]:
+    def recognize(self, frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        frame = frame.reshape(1, self.width, self.height, 3)
+        return self.model.predict(frame)
+
+    def postprocess_frame(self, polylines: np.ndarray, labels: np.ndarray) -> Tuple[List[np.ndarray]]:
         """
         Get Splitted polylines and labels values for 6 numpy arrays respectively
 
@@ -145,27 +166,26 @@ class FrameHandler(metaclass=MetaSingleton):
         :param labels:
         :return:
         """
-        polylines = np.hsplit(polylines, 6)
-        polylines = cls.filter_coordinates(polylines)
-        colors = cls.get_colour(np.hsplit(np.where(labels > 0.5, 1, 0), 6))
-        return zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors)))
+        polylines = np.hsplit(polylines, self.max_lines_per_frame)
+        polylines = self.filter_coordinates(polylines)
+        colors = self.get_colour(np.hsplit(np.where(labels > 0.5, 1, 0), self.max_lines_per_frame))
+        return zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))) \
+               or np.empty(shape=(0)), np.empty(shape=(0))
 
     @classmethod
     def get_colour(cls, labels: List[np.ndarray]) -> List[Tuple[int, int, int]]:
         """Get color from several line labels"""
         return list(map(lambda one_hot_v: get_colour_from_one_hot_vector(one_hot_v), labels))
 
-    @classmethod
-    def filter_coordination_for_resolution(cls, polyline: np.ndarray) -> np.ndarray:
+    def filter_coordination_for_resolution(self, polyline: np.ndarray) -> np.ndarray:
         valid = ((polyline[:, 0] > 0) & (polyline[:, 1] > 0)
-                 & (polyline[:, 0] < 1280) & (polyline[:, 1] < 960))
+                 & (polyline[:, 0] < self.width) & (polyline[:, 1] < self.height))
         return polyline[valid]
 
-    @classmethod
-    def filter_coordinates(cls, list_of_polylines: List[np.ndarray]) -> np.ndarray:
+    def filter_coordinates(self, list_of_polylines: List[np.ndarray]) -> np.ndarray:
         """Remove empty points and coordinates x or y, that is less than 0"""
         list_of_polylines = list(map(lambda x: x.reshape(-1, 2), list_of_polylines))
-        return list(map(lambda polyline: cls.filter_coordination_for_resolution(polyline),
+        return list(map(lambda polyline: self.filter_coordination_for_resolution(polyline),
                         list_of_polylines))
 
     @classmethod
@@ -173,6 +193,7 @@ class FrameHandler(metaclass=MetaSingleton):
                        list_of_colors: List[np.ndarray]) -> np.ndarray:
         """
         draw polylines and labels to a frame
+        :param list_of_colors: list of color for each polyline
         :param frame: input frame
         :param list_of_points: list of polylines
         :param list_of_labels: list of label that corresponds to list of polylines
@@ -182,5 +203,6 @@ class FrameHandler(metaclass=MetaSingleton):
         # TODO @Karim: try to understand `PoseArray` and further logic
         ###
         for points, color in zip(list_of_points, list_of_colors):
-            frame = cv2.polylines(frame, points, True, color, thickness=2)
+            frame = cv2.polylines(frame, points, True, color, thickness=10)
+            cv2.imshow('Test_frame',frame)
         return frame

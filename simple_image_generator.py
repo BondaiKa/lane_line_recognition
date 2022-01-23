@@ -9,7 +9,7 @@ import random
 
 from tensorflow.keras.utils import Sequence
 from utils import one_hot_list_encoder
-from vil_100_utils import get_valid_attribute
+from vil_100_utils import get_valid_attribute, LANE_ID_FULL_LIST
 import logging
 
 BASE_DIR = "VIL100/"
@@ -29,7 +29,7 @@ class SimpleFrameGenerator(Sequence):
     def __init__(self,
                  num_type_of_lines=11,
                  max_num_points=91,
-                 max_lines_per_frame=6,
+                 max_lines_per_frame=8,
                  rescale=1 / 255.,  # TODO @Karim: include and use later
                  batch_size: int = 8,
                  target_shape: Tuple[int, int] = (1280, 960),
@@ -89,25 +89,30 @@ class SimpleFrameGenerator(Sequence):
         """
         with open(json_path) as f:
             lanes: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
+            lanes = sorted(lanes, key=lambda lane: lane['lane_id'])
+
             if lanes:
                 polylines, labels = list(), list()
                 # TODO @Karim: check another params in json files like "occlusion"
-                for lane in lanes:
-                    points, label = self.__get_polyline_with_label(lane=lane)
-                    # TODO @Karim: debug
-                    points = np.hstack([points, np.zeros(shape=(self.max_num_points * 2 - points.shape[0]))])
-                    polylines.append(points)
-                    labels.append(label)
+                exist_lane = [x['lane_id'] for x in lanes]
+                missed_lane = LANE_ID_FULL_LIST - set(exist_lane)
 
-                polylines.append(np.zeros(
-                    shape=((self.max_lines_per_frame - len(polylines)) * self.max_num_points * 2)))
+                for lane_id in range(1, self.max_lines_per_frame + 1):
+                    if lane_id in missed_lane:
+                        points = np.zeros(shape=(self.max_num_points * 2))
+                        label = one_hot_list_encoder(0, self.num_type_of_lines)
+                    else:
+                        points, label = self.__get_polyline_with_label(lane=lanes[exist_lane.index(lane_id)])
 
-                label_empty_list = [one_hot_list_encoder(0, self.num_type_of_lines) for x in
-                                    range(self.max_lines_per_frame - len(labels))]
-                if label_empty_list:
-                    labels.append(np.concatenate(label_empty_list))
+                    if lane_id % 2 == 0:
+                        polylines.append(points)
+                        labels.append(label)
+                    else:
+                        polylines = [points] + polylines
+                        labels = [label] + labels
 
-                return np.concatenate(polylines), np.concatenate(labels)
+                return np.concatenate(polylines), \
+                       np.concatenate(labels)
             else:
                 empty_label = one_hot_list_encoder(0, self.num_type_of_lines)
                 polylines_empty_shape = self.max_lines_per_frame * self.max_num_points * 2
@@ -162,18 +167,22 @@ class SimpleFrameDataGen:
         self.__json_glob_path = json_glob_path
 
     def flow_from_directory(self, subset: str = TRAINING,
-                            shuffle: bool = True, *args, **kwargs) -> SimpleFrameGenerator:
+                            shuffle: bool = True, number_files: int = 2000, *args, **kwargs) -> SimpleFrameGenerator:
         """
         Get generator for subset
         :param subset: 'training' or 'validation'
         :param shuffle: flag for shuffling
+        :param number_files: rectrict max number of files from dataset
         :param args: args for specific dataset
         :param kwargs: kwargs for specific dataset
         :return: Specific generator for specific subset
         """
 
         files = sorted(glob.glob(self.__frame_glob_path))
-        json_files = sorted(glob.glob(self.__json_glob_path))
+        log.info(f"Number of files in dataset: {len(files)}. Using in training/validation: {number_files}")
+        files = files[:number_files]
+
+        json_files = sorted(glob.glob(self.__json_glob_path))[:number_files]
         files_count = len(files)
         json_files_count = len(json_files)
 
@@ -214,9 +223,8 @@ if __name__ == "__main__":
 
     for item in train_generator:
         print(item[0].shape)
+        print(item[1][0].shape)
         print(item[1][1].shape)
-        print(item[1][2].shape)
-        break
 
     # for item in validation_generator:
     #     print([x.shape for x in item[1]])
