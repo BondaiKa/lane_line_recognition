@@ -145,7 +145,6 @@ class FrameHandler(metaclass=MetaSingleton):
 
         log.debug(f"Resizing frame to {width}x{height} resolution...")
         frame = cv2.resize(frame, dsize=(width, height), interpolation=cv2.INTER_AREA)
-        # TODO @Karim: rescale frame to 1 / 255.
         frame = frame / 255
         # TODO @Karim use transform later
         # presp_frame = transform_frame(frame, width, height)
