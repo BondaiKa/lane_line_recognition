@@ -17,7 +17,7 @@ class FakeVideoHandler(AbstractVideoHandler):
             # width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
             # height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
             frame = frame_handler.preprocess_frame(frame=frame_dis)
-            polylines, labels = frame_handler.recognize(frame=frame)
+            polylines, *labels = frame_handler.recognize(frame=frame)
             polylines, colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels)
             result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
             cv2.imshow(f'Final frame', result)
