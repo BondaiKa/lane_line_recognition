@@ -30,6 +30,7 @@ if __name__ == "__main__":
         height=CAMERA_HEIGHT,
         max_lines_per_frame=MAX_LINES_PER_FRAME,
         max_num_points=MAX_NUM_POINTS,
+        num_type_of_lines=NUM_TYPE_OF_LINES
     )
 
     camera.process(frame_handler=frame_handler)
