@@ -9,7 +9,7 @@ import random
 
 from tensorflow.keras.utils import Sequence
 from utils import one_hot_list_encoder
-from vil_100_utils import get_valid_attribute, LANE_ID_FULL_LIST
+from vil_100_utils import get_valid_attribute, LANE_ID_FULL_LIST, LineType, Vil100Json
 import logging
 
 BASE_DIR = "VIL100/"
@@ -27,9 +27,9 @@ class SimpleFrameGenerator(Sequence):
     """
 
     def __init__(self,
-                 num_type_of_lines=11,
+                 num_type_of_lines=4,
                  max_num_points=91,
-                 max_lines_per_frame=8,
+                 max_lines_per_frame=2,
                  rescale=1 / 255.,  # TODO @Karim: include and use later
                  batch_size: int = 8,
                  target_shape: Tuple[int, int] = (1280, 960),
@@ -74,10 +74,10 @@ class SimpleFrameGenerator(Sequence):
     def __get_polyline_with_label(self, lane: dict) -> Tuple[np.ndarray, np.ndarray]:
         """Get array from points list"""
         points = np.array(
-            lane["points"]).flatten()
+            lane[Vil100Json.POINTS]).flatten()
         points = np.pad(points, pad_width=(0, self.max_num_points * 2 - points.shape[0]))
         # TODO @Karim: remember below `label.get(label)` is index 1,2,3,4
-        label = get_valid_attribute(lane.get('attribute', 1))
+        label = get_valid_attribute(lane.get(Vil100Json.ATTRIBUTE, LineType.NO_LINE))
         labels = one_hot_list_encoder(label, self.num_type_of_lines)
         return points, labels
 
@@ -88,11 +88,11 @@ class SimpleFrameGenerator(Sequence):
         :return: right points for frame
         """
         with open(json_path) as f:
-            lanes: List[Dict[str, int]] = json.load(f)["annotations"]["lane"]
-            lanes = sorted(lanes, key=lambda lane: lane['lane_id'])
+            lanes: List[Dict[str, int]] = json.load(f)[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
+            lanes = sorted(lanes, key=lambda lane: lane[Vil100Json.LANE_ID])
 
             if lanes:
-                polylines, labels = list(), list()
+                polylines, labels = np.array([]), np.array([])
                 # TODO @Karim: check another params in json files like "occlusion"
                 exist_lane = [x['lane_id'] for x in lanes]
                 missed_lane = LANE_ID_FULL_LIST - set(exist_lane)
@@ -100,43 +100,39 @@ class SimpleFrameGenerator(Sequence):
                 for lane_id in range(1, self.max_lines_per_frame + 1):
                     if lane_id in missed_lane:
                         points = np.zeros(shape=(self.max_num_points * 2))
-                        label = one_hot_list_encoder(0, self.num_type_of_lines)
+                        label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
                     else:
                         points, label = self.__get_polyline_with_label(lane=lanes[exist_lane.index(lane_id)])
 
                     if lane_id % 2 == 0:
-                        polylines.append(points)
-                        labels.append(label)
+                        polylines = np.append(polylines, points)
+                        labels = np.append(labels, label)
                     else:
-                        polylines = [points] + polylines
-                        labels = [label] + labels
+                        polylines = np.insert(polylines, 0, points)
+                        labels = np.insert(labels, 0, label)
 
-                return np.concatenate(polylines), labels
+                return polylines, labels
             else:
-                empty_label = one_hot_list_encoder(0, self.num_type_of_lines)
+                empty_label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
                 polylines_empty_shape = self.max_lines_per_frame * self.max_num_points * 2
-                return np.zeros(shape=(polylines_empty_shape)), map(lambda x: x, empty_label)
+                return np.zeros(shape=polylines_empty_shape), np.array(
+                    [empty_label for x in range(self.max_lines_per_frame)]).flatten()
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         batch_frames_path = self.files[idx * self.batch_size:
                                        (idx + 1) * self.batch_size]
         batch_json_path = self.json_files[idx * self.batch_size:
                                           (idx + 1) * self.batch_size]
-        polyline_list, list_of_list_label = list(), list([[],[],[],[],[],[],[],[]])
 
-        for json in batch_json_path:
-            polylines, *list_label = self.__get_polyline_and_label_from_file(json)
-            polyline_list.append(polylines)
-
-            for idx, label in enumerate(list_label[0]):
-                list_of_list_label[idx].append(label)
-
-        polylines_output = np.vstack(polyline_list)
-        labels_output = tuple(map(lambda x: np.vstack(x), list_of_list_label))
+        polylines_list, labels_list = self.__get_polyline_and_label_from_file(batch_json_path[0])
+        for _json in batch_json_path[1:]:
+            polylines, labels = self.__get_polyline_and_label_from_file(_json)
+            polylines_list = np.vstack((polylines_list, polylines))
+            labels_list = np.vstack((labels_list, labels))
 
         return np.array([
             resize(imread(file_name) * self.rescale, self.target_shape) for file_name in
-            batch_frames_path]), (polylines_output,) + labels_output
+            batch_frames_path]), (polylines_list,) + tuple(np.hsplit(labels_list, self.max_lines_per_frame))
 
 
 class SimpleFrameDataGen:
@@ -219,20 +215,11 @@ if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_glob_path = JSON_PATH + '/*/*.json'
     data_gen = SimpleFrameDataGen(validation_split=0.2, frame_glob_path=image_glob_path, json_glob_path=json_glob_path)
-    train_generator = data_gen.flow_from_directory(subset='training', shuffle=True,batch_size = BATCH_SIZE)
-    validation_generator = data_gen.flow_from_directory(subset='validation', shuffle=True,batch_size = BATCH_SIZE)
+    train_generator = data_gen.flow_from_directory(subset='training', shuffle=True, batch_size=BATCH_SIZE)
+    validation_generator = data_gen.flow_from_directory(subset='validation', shuffle=True, batch_size=BATCH_SIZE)
 
     for item in train_generator:
-        print(item[1][0].shape)
-        print(item[1][1].shape)
-        print(item[1][2].shape)
-        print(item[1][3].shape)
-        print(item[1][4].shape)
-        print(item[1][5].shape)
-        print(item[1][6].shape)
-        print(item[1][7].shape)
-        print(item[1][8].shape)
-        break
+        print(item)
 
     # for item in validation_generator:
     #     print([x.shape for x in item[1]])
