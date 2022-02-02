@@ -219,10 +219,6 @@ class FrameHandler(metaclass=MetaSingleton):
         :param list_of_labels: list of label that corresponds to list of polylines
         :return:
         """
-        ###
-        # TODO @Karim: try to understand `PoseArray` and further logic
-        ###
         for points, color in zip(list_of_points, list_of_colors):
-            frame = cv2.polylines(frame, np.int32(points).reshape((-1, 1, 2)), 1, color, thickness=5)
-            cv2.imshow('Test_frame', frame)
+            frame = cv2.polylines(frame, [np.int32(points).reshape((-1, 1, 2))], 1, color, thickness=5)
         return frame

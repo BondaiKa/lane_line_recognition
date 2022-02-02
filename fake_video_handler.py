@@ -13,7 +13,7 @@ class FakeVideoHandler(AbstractVideoHandler):
         log.info('Start fake video processing...')
         while self.video.isOpened():  # TODO @Karim revert to full video not 1 frame
             ret, frame_dis = self.video.read()
-            cv2.imshow(f'initial_{frame_dis.shape}', frame_dis)
+            cv2.imshow(f'initial_frame', frame_dis)
             # width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
             # height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
             frame = frame_handler.preprocess_frame(frame=frame_dis)
