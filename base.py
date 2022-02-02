@@ -1,6 +1,6 @@
 import logging
 from abc import ABC
-from typing import Union
+from typing import Union, Tuple
 import cv2
 import numpy as np
 from typing import Tuple, List
@@ -98,39 +98,66 @@ class FrameHandler(metaclass=MetaSingleton):
     """Draw polyline and other necessary data to frame"""
 
     @staticmethod
-    def __build_model(polyline_output_shape: int, label_output_shape: int, input_shape=(1280, 960, 3)):
+    def __build_model(polyline_output_shape: int, label_output_shape: int, input_shape: Tuple[int, int, int]):
+        # pretrained
         pre_trained_model = tf.keras.applications.InceptionResNetV2(input_shape=input_shape,
                                                                     weights='imagenet',
                                                                     include_top=False)
-
         global_max_pool = layers.GlobalMaxPool2D()(pre_trained_model.output)
-        dense_polyline = tf.keras.layers.Dense(units=512, activation='relu')(global_max_pool)
+        dropout_max_pool = layers.Dropout(.2)(global_max_pool)
+
+        # polyline part
+        dense_polyline = tf.keras.layers.Dense(units=512, activation='relu')(dropout_max_pool)
         dropout_polyine = layers.Dropout(.2)(dense_polyline)
         dense_polyline_2 = tf.keras.layers.Dense(units=512, activation='relu')(dropout_polyine)
         dropout_polyine_2 = layers.Dropout(.2)(dense_polyline_2)
 
-        dense_label = tf.keras.layers.Dense(units=66, activation='relu')(global_max_pool)
+        # label common part
+        dense_label = tf.keras.layers.Dense(units=256, activation='relu')(dropout_max_pool)
         dropout_label = layers.Dropout(.2)(dense_label)
-        dense_label_2 = tf.keras.layers.Dense(units=66, activation='relu')(dropout_label)
-        dropout_label_2 = layers.Dropout(.2)(dense_label_2)
 
+        # lane 1 part
+        x = tf.keras.layers.Dense(units=128, activation='relu')(dropout_label)
+        x = layers.Dropout(.2)(x)
+        x = tf.keras.layers.Dense(units=64, activation='relu')(x)
+        x = layers.Dropout(.2)(x)
+        x = tf.keras.layers.Dense(units=32, activation='relu')(x)
+        x = layers.Dropout(.2)(x)
+
+        # lane 2 part
+        y = tf.keras.layers.Dense(units=128, activation='relu')(dropout_label)
+        y = layers.Dropout(.2)(y)
+        y = tf.keras.layers.Dense(units=64, activation='relu')(y)
+        y = layers.Dropout(.2)(y)
+        y = tf.keras.layers.Dense(units=32, activation='relu')(y)
+        y = layers.Dropout(.2)(y)
+
+        # output
         polyline_output = layers.Dense(polyline_output_shape, name='polyline_output')(dropout_polyine_2)
-        label_output = layers.Dense(label_output_shape, activation='softmax', name='label_output')(dropout_label_2)
+        label_output_1 = layers.Dense(label_output_shape, activation='softmax', name='label_output_1')(x)
+        label_output_2 = layers.Dense(label_output_shape, activation='softmax', name='label_output_2')(y)
 
-        model = Model(pre_trained_model.input, outputs=[polyline_output, label_output])
+        model = Model(pre_trained_model.input, outputs=[
+            polyline_output,
+            label_output_1,
+            label_output_2,
+        ], name='lane_line_cnn_model')
 
         return model, pre_trained_model
 
-    def __init__(self, model_weights_path: str = '', width: int = 1280,
-                 height: int = 960, max_lines_per_frame: int = 8):
+    def __init__(self, model_weights_path: str, width: int,
+                 height: int, max_lines_per_frame: int, max_num_points: int, num_type_of_lines: int):
         """
+        :param num_type_of_lines: max lane line type (dotted, solid etc)
         :param model_weights_path:  neural net weights with h5 format path
         :param width: width of camera/desired frame
         :param height: height of camera/desired frame
         :param max_lines_per_frame: maximum num of lines in a frame
+        :param max_num_points: maximum number of points(x,y) per polylines
         """
-        model, pre_trained_model = self.__build_model(polyline_output_shape=91 * 2 * max_lines_per_frame,
-                                                      label_output_shape=max_lines_per_frame * 11)
+        model, pre_trained_model = self.__build_model(polyline_output_shape=max_num_points * 2 * max_lines_per_frame,
+                                                      label_output_shape=num_type_of_lines,
+                                                      input_shape=(width, height, 3))
         model.load_weights(model_weights_path)
         self.model = model
         self.width = width
@@ -167,14 +194,8 @@ class FrameHandler(metaclass=MetaSingleton):
         """
         polylines = np.hsplit(polylines, self.max_lines_per_frame)
         polylines = self.filter_coordinates(polylines)
-        colors = self.get_colour(np.hsplit(np.where(labels > 0.5, 1, 0), self.max_lines_per_frame))
-        return zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))) \
-               or np.empty(shape=(0)), np.empty(shape=(0))
-
-    @classmethod
-    def get_colour(cls, labels: List[np.ndarray]) -> List[Tuple[int, int, int]]:
-        """Get color from several line labels"""
-        return list(map(lambda one_hot_v: get_colour_from_one_hot_vector(one_hot_v), labels))
+        colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label > 0.5, 1, 0)), labels))
+        return zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors)))
 
     def filter_coordination_for_resolution(self, polyline: np.ndarray) -> np.ndarray:
         valid = ((polyline[:, 0] > 0) & (polyline[:, 1] > 0)
@@ -198,10 +219,6 @@ class FrameHandler(metaclass=MetaSingleton):
         :param list_of_labels: list of label that corresponds to list of polylines
         :return:
         """
-        ###
-        # TODO @Karim: try to understand `PoseArray` and further logic
-        ###
         for points, color in zip(list_of_points, list_of_colors):
-            frame = cv2.polylines(frame, points, True, color, thickness=10)
-            cv2.imshow('Test_frame',frame)
+            frame = cv2.polylines(frame, [np.int32(points).reshape((-1, 1, 2))], 1, color, thickness=5)
         return frame
