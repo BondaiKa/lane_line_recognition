@@ -50,6 +50,12 @@ VIL_100_colour_line = {
 }
 
 
+class VIL100HDF5:
+    ROOT_FOLDER = 'hdf5'
+    GROUP_NAME = 'frame_polylines_labels'
+    POLYLINES_DATASET_NAME = 'polylines'
+    LABELS_DATASET_NAME = 'labels'
+
 def get_valid_attribute(attr: int) -> int:
     """Change attribute from VIL100 dataset to normal number without missings"""
     _VIL_100_attributes = {

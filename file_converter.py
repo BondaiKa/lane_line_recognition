@@ -7,18 +7,12 @@ from utils import one_hot_list_encoder
 import glob
 import os
 from pathlib import Path
+from vil_100_utils import VIL100HDF5
 
 from dotenv import load_dotenv
 import logging
 
 log = logging.getLogger(__name__)
-
-
-class VIL100HDF5:
-    ROOT_FOLDER = 'hdf5'
-    GROUP_NAME = 'frame_polylines_labels'
-    POLYLINES_DATASET_NAME = 'polylines'
-    LABES_DATASET_NAME = 'labels'
 
 
 class VILLJsonConverter:
@@ -98,7 +92,7 @@ class VILLJsonConverter:
             with h5py.File(f"{'/'.join(root_path)}/{frame_name}.hdf5", "w") as f:
                 grp = f.create_group(VIL100HDF5.GROUP_NAME)
                 grp.create_dataset(VIL100HDF5.POLYLINES_DATASET_NAME, data=polylines, dtype='int32')
-                grp.create_dataset(VIL100HDF5.LABES_DATASET_NAME, data=labels, dtype='int32')
+                grp.create_dataset(VIL100HDF5.LABELS_DATASET_NAME, data=labels, dtype='int32')
 
 
 if __name__ == '__main__':
