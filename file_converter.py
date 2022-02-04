@@ -20,13 +20,11 @@ class VILLJsonConverter:
                  max_lines_per_frame: int,
                  max_num_points: int,
                  num_type_of_lines: int,
-                 frame_glob_path: str = None,
                  json_glob_path: str = None, ):
 
         self.max_lines_per_frame = max_lines_per_frame
         self.max_num_points = max_num_points
         self.num_type_of_lines = num_type_of_lines
-        # self.files = sorted(glob.glob(frame_glob_path))
         self.json_files = sorted(glob.glob(json_glob_path))
         self.files_count = len(self.json_files)
 
@@ -41,6 +39,12 @@ class VILLJsonConverter:
         return points, labels
 
     def __get_polyline_and_label_from_file(self, json_path: str) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Retrieve from json file polylines and labels and format to nn input
+
+        :param json_path: json file path
+        :return: frame and tuple of labels
+        """
         with open(json_path) as f:
             lanes: List[Dict[str, int]] = json.load(f)[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
             lanes = sorted(lanes, key=lambda lane: lane[Vil100Json.LANE_ID])
@@ -73,6 +77,7 @@ class VILLJsonConverter:
                     [empty_label for x in range(self.max_lines_per_frame)]).flatten()
 
     def exec(self) -> None:
+        """Convert and save json files to new hdf5 files"""
         for json_file_path in self.json_files:
             polylines, labels = self.__get_polyline_and_label_from_file(json_file_path)
 
