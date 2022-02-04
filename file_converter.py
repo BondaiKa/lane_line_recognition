@@ -14,6 +14,13 @@ import logging
 log = logging.getLogger(__name__)
 
 
+class VIL100HDF5:
+    ROOT_FOLDER = 'hdf5'
+    GROUP_NAME = 'frame_polylines_labels'
+    POLYLINES_DATASET_NAME = 'polylines'
+    LABES_DATASET_NAME = 'labels'
+
+
 class VILLJsonConverter:
 
     def __init__(self,
@@ -81,14 +88,17 @@ class VILLJsonConverter:
         for json_file_path in self.json_files:
             polylines, labels = self.__get_polyline_and_label_from_file(json_file_path)
 
-            video_name, frame_name = json_file_path.split('/')[-2:]
+            full_path_list = json_file_path.split('/')
+            full_path_list[-3] = VIL100HDF5.ROOT_FOLDER
+            root_path = full_path_list[:-1]
+            frame_name = full_path_list[-1]
 
-            Path(f"hdf5/{video_name}").mkdir(parents=True, exist_ok=True)
+            Path(f"{'/'.join(root_path)}").mkdir(parents=True, exist_ok=True)
 
-            with h5py.File(f"hdf5/{video_name}/{frame_name}.hdf5", "w") as f:
-                grp = f.create_group('frame_polylines_labels')
-                grp.create_dataset("polylines", data=polylines, dtype='int32')
-                grp.create_dataset("labels", data=labels, dtype='int32')
+            with h5py.File(f"{'/'.join(root_path)}/{frame_name}.hdf5", "w") as f:
+                grp = f.create_group(VIL100HDF5.GROUP_NAME)
+                grp.create_dataset(VIL100HDF5.POLYLINES_DATASET_NAME, data=polylines, dtype='int32')
+                grp.create_dataset(VIL100HDF5.LABES_DATASET_NAME, data=labels, dtype='int32')
 
 
 if __name__ == '__main__':
@@ -109,3 +119,4 @@ if __name__ == '__main__':
         json_glob_path=json_glob_path,
     )
     converter.exec()
+    print('Done...')
