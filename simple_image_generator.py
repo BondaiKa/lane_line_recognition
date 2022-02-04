@@ -81,7 +81,7 @@ class SimpleFrameGenerator(Sequence):
         labels = one_hot_list_encoder(label, self.num_type_of_lines)
         return points, labels
 
-    def __get_polyline_and_label_from_file(self, json_path: str) -> np.ndarray:
+    def __get_polyline_and_label_from_file(self, json_path: str) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get all Polygonal chains from json file and label of line
         :param json_path: path of json file
@@ -94,7 +94,7 @@ class SimpleFrameGenerator(Sequence):
             if lanes:
                 polylines, labels = np.array([]), np.array([])
                 # TODO @Karim: check another params in json files like "occlusion"
-                exist_lane = [x['lane_id'] for x in lanes]
+                exist_lane = [x[Vil100Json.LANE_ID] for x in lanes]
                 missed_lane = LANE_ID_FULL_LIST - set(exist_lane)
 
                 for lane_id in range(1, self.max_lines_per_frame + 1):
