@@ -4,9 +4,8 @@ from typing import Union, Tuple
 import cv2
 import numpy as np
 from typing import Tuple, List
-import tensorflow as tf
 from vil_100_utils import get_colour_from_one_hot_vector
-from tensorflow.keras import layers, Model
+from build_model import build_model
 
 log = logging.getLogger(__name__)
 
@@ -97,54 +96,6 @@ def transform_frame(frame: np.ndarray, width: int, height: int, reverse_flag=Fal
 class FrameHandler(metaclass=MetaSingleton):
     """Draw polyline and other necessary data to frame"""
 
-    @staticmethod
-    def __build_model(polyline_output_shape: int, label_output_shape: int, input_shape: Tuple[int, int, int]):
-        # pretrained
-        pre_trained_model = tf.keras.applications.InceptionResNetV2(input_shape=input_shape,
-                                                                    weights='imagenet',
-                                                                    include_top=False)
-        global_max_pool = layers.GlobalMaxPool2D()(pre_trained_model.output)
-        dropout_max_pool = layers.Dropout(.2)(global_max_pool)
-
-        # polyline part
-        dense_polyline = tf.keras.layers.Dense(units=512, activation='relu')(dropout_max_pool)
-        dropout_polyine = layers.Dropout(.2)(dense_polyline)
-        dense_polyline_2 = tf.keras.layers.Dense(units=512, activation='relu')(dropout_polyine)
-        dropout_polyine_2 = layers.Dropout(.2)(dense_polyline_2)
-
-        # label common part
-        dense_label = tf.keras.layers.Dense(units=256, activation='relu')(dropout_max_pool)
-        dropout_label = layers.Dropout(.2)(dense_label)
-
-        # lane 1 part
-        x = tf.keras.layers.Dense(units=128, activation='relu')(dropout_label)
-        x = layers.Dropout(.2)(x)
-        x = tf.keras.layers.Dense(units=64, activation='relu')(x)
-        x = layers.Dropout(.2)(x)
-        x = tf.keras.layers.Dense(units=32, activation='relu')(x)
-        x = layers.Dropout(.2)(x)
-
-        # lane 2 part
-        y = tf.keras.layers.Dense(units=128, activation='relu')(dropout_label)
-        y = layers.Dropout(.2)(y)
-        y = tf.keras.layers.Dense(units=64, activation='relu')(y)
-        y = layers.Dropout(.2)(y)
-        y = tf.keras.layers.Dense(units=32, activation='relu')(y)
-        y = layers.Dropout(.2)(y)
-
-        # output
-        polyline_output = layers.Dense(polyline_output_shape, name='polyline_output')(dropout_polyine_2)
-        label_output_1 = layers.Dense(label_output_shape, activation='softmax', name='label_output_1')(x)
-        label_output_2 = layers.Dense(label_output_shape, activation='softmax', name='label_output_2')(y)
-
-        model = Model(pre_trained_model.input, outputs=[
-            polyline_output,
-            label_output_1,
-            label_output_2,
-        ], name='lane_line_cnn_model')
-
-        return model, pre_trained_model
-
     def __init__(self, model_weights_path: str, width: int,
                  height: int, max_lines_per_frame: int, max_num_points: int, num_type_of_lines: int):
         """
@@ -155,7 +106,7 @@ class FrameHandler(metaclass=MetaSingleton):
         :param max_lines_per_frame: maximum num of lines in a frame
         :param max_num_points: maximum number of points(x,y) per polylines
         """
-        model, pre_trained_model = self.__build_model(polyline_output_shape=max_num_points * 2 * max_lines_per_frame,
+        model, pre_trained_model = build_model(polyline_output_shape=max_num_points * 2 * max_lines_per_frame,
                                                       label_output_shape=num_type_of_lines,
                                                       input_shape=(width, height, 3))
         model.load_weights(model_weights_path)
@@ -220,5 +171,5 @@ class FrameHandler(metaclass=MetaSingleton):
         :return:
         """
         for points, color in zip(list_of_points, list_of_colors):
-            frame = cv2.polylines(frame, [np.int32(points).reshape((-1, 1, 2))], 1, color, thickness=5)
+            frame = cv2.polylines(frame, np.int32(points).reshape((-1, 1, 2)), 1, color, thickness=5)
         return frame
