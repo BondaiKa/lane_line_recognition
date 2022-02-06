@@ -21,19 +21,34 @@ class VILLJsonConverter:
                  max_lines_per_frame: int,
                  max_num_points: int,
                  num_type_of_lines: int,
-                 json_glob_path: str = None, ):
+                 json_glob_path: str,
+                 original_shape: Tuple[int, int],
+                 final_shape: Tuple[int, int],
+                 ):
 
         self.max_lines_per_frame = max_lines_per_frame
         self.max_num_points = max_num_points
         self.num_type_of_lines = num_type_of_lines
         self.json_files = sorted(glob.glob(json_glob_path))
         self.files_count = len(self.json_files)
+        self.original_shape = original_shape
+        self.final_shape = final_shape
+
+    def __rescale_coordinates(self, row: np.ndarray) -> np.ndarray:
+        return int(row[0] / self.original_shape[0] * self.final_shape[0]), \
+               int(row[1] / self.original_shape[1] * self.final_shape[1])
+
+    def __rescale_polylines(self, polylines: np.ndarray) -> np.ndarray:
+        """Rescale coordinates due to new frame resolution"""
+        return np.apply_along_axis(self.__rescale_coordinates, axis=1, arr=polylines)
 
     def __get_polyline_with_label(self, lane: dict) -> Tuple[np.ndarray, np.ndarray]:
         """Get array from points list"""
         points = np.array(
-            lane[Vil100Json.POINTS]).flatten()
-        points = np.pad(points, pad_width=(0, self.max_num_points * 2 - points.shape[0]))
+            lane[Vil100Json.POINTS])
+        points = self.__rescale_polylines(points).flatten()
+        points = np.pad(points, pad_width=(0, self.max_num_points * 2 - points.shape[0]),
+                        mode='constant', constant_values=(-100,))
         # TODO @Karim: remember below `label.get(label)` is index 1,2,3,4
         label = get_valid_attribute(lane.get(Vil100Json.ATTRIBUTE, LineType.NO_LINE))
         labels = one_hot_list_encoder(label, self.num_type_of_lines)
@@ -103,7 +118,11 @@ if __name__ == '__main__':
     MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     JSON_PATH = os.getenv('JSON_DATASET_PATH')
+    ORIGINAL_WIDTH = int(os.getenv('ORIGINAL_WIDTH'))
+    ORIGINAL_HEIGHT = int(os.getenv('ORIGINAL_HEIGHT'))
 
+    original_shape = (ORIGINAL_WIDTH, ORIGINAL_HEIGHT)
+    final_shape = (CAMERA_WIDTH, CAMERA_HEIGHT)
     json_glob_path = JSON_PATH + '/*/*.json'
 
     converter = VILLJsonConverter(
@@ -111,6 +130,8 @@ if __name__ == '__main__':
         max_num_points=MAX_NUM_POINTS,
         num_type_of_lines=NUM_TYPE_OF_LINES,
         json_glob_path=json_glob_path,
+        original_shape=original_shape,
+        final_shape=final_shape,
     )
     converter.exec()
     print('Done...')
