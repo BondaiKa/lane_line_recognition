@@ -79,6 +79,16 @@ class SimpleFrameGenerator(Sequence):
         group = file.get(VIL100HDF5.GROUP_NAME)
         return group.get(VIL100HDF5.POLYLINES_DATASET_NAME), group.get(VIL100HDF5.LABELS_DATASET_NAME)
 
+    def __get_frame_from_file(self, frame_path: str) -> np.ndarray:
+        frame = tf.keras.utils.load_img(frame_path,
+                                            color_mode='rgb',
+                                            target_size=(self.target_shape[1], self.target_shape[0])
+                                            )
+        frame = tf.keras.preprocessing.image.img_to_array(frame)
+        frame = frame * self.rescale
+        frame = np.expand_dims(frame,0)
+        return frame
+
     def __getitem__(self, idx) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         batch_frames_path = self.files[idx * self.batch_size:
                                        (idx + 1) * self.batch_size]
@@ -86,14 +96,17 @@ class SimpleFrameGenerator(Sequence):
                                           (idx + 1) * self.batch_size]
 
         polylines_list, labels_list = self.__get_polyline_and_label_from_file(batch_json_path[0])
-        for _json in batch_json_path[1:]:
+        frame_list = self.__get_frame_from_file(batch_frames_path[0])
+
+        for _frame, _json in zip(batch_frames_path[1:], batch_json_path[1:]):
             polylines, labels = self.__get_polyline_and_label_from_file(_json)
             polylines_list = np.vstack((polylines_list, polylines))
             labels_list = np.vstack((labels_list, labels))
 
-        return np.array([
-            resize(imread(file_name) * self.rescale, self.target_shape) for file_name in
-            batch_frames_path]), (polylines_list,) + tuple(np.hsplit(labels_list, self.max_lines_per_frame))
+            frame = self.__get_frame_from_file(_frame)
+            frame_list = np.vstack((frame_list, frame))
+
+        return (frame_list), (polylines_list,) + tuple(np.hsplit(labels_list, self.max_lines_per_frame))
 
 
 class SimpleFrameDataGen:
@@ -169,7 +182,6 @@ class SimpleFrameDataGen:
                                     shuffle=shuffle,
                                     json_files=json_files,
                                     *args, **kwargs)
-
 
 if __name__ == "__main__":
     load_dotenv()
