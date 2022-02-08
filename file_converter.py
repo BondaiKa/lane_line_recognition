@@ -8,11 +8,16 @@ import glob
 import os
 from pathlib import Path
 from vil_100_utils import VIL100HDF5
+from fix_json_files import JsonReviewer
+import cv2
+from typing import Union
 
 from dotenv import load_dotenv
 import logging
 
 log = logging.getLogger(__name__)
+
+Lane_type = List[Dict[str, int]]
 
 
 class VILLJsonConverter:
@@ -23,6 +28,7 @@ class VILLJsonConverter:
                  num_type_of_lines: int,
                  json_glob_path: str,
                  final_shape: Tuple[int, int],
+                 frame_dataset_path: str,
                  ):
 
         self.max_lines_per_frame = max_lines_per_frame
@@ -30,7 +36,7 @@ class VILLJsonConverter:
         self.num_type_of_lines = num_type_of_lines
         self.json_files = sorted(glob.glob(json_glob_path))
         self.files_count = len(self.json_files)
-
+        self.frame_dataset_path = frame_dataset_path
         self.final_shape = final_shape
 
     def __rescale_coordinates(self, row: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
@@ -65,11 +71,22 @@ class VILLJsonConverter:
         :return: frame and tuple of labels
         """
         with open(json_path) as f:
-            lanes: List[Dict[str, int]] = json.load(f)
-            width = lanes[Vil100Json.INFO][Vil100Json.WIDTH]
-            height = lanes[Vil100Json.INFO][Vil100Json.HEIGHT]
+            json_file: Dict[str, Union[int, dict]] = json.load(f)
+            image_path = json_file[Vil100Json.INFO][Vil100Json.IMAGE_PATH]
+            full_path = self.frame_dataset_path + '/' + image_path
+            frame = cv2.imread(full_path)
+            height, width = frame.shape[0], frame.shape[1]
+            json_file = JsonReviewer.fix_json_file(
+                json_file=json_file,
+                frame_real_height=height,
+                frame_real_width=width,
+                frame_path=image_path
+            )
 
-            lanes = lanes[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
+            width = json_file[Vil100Json.INFO][Vil100Json.WIDTH]
+            height = json_file[Vil100Json.INFO][Vil100Json.HEIGHT]
+
+            lanes: Lane_type = json_file[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
             lanes = sorted(lanes, key=lambda lane: lane[Vil100Json.LANE_ID])
 
             if lanes:
@@ -129,6 +146,8 @@ if __name__ == '__main__':
     MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     JSON_PATH = os.getenv('JSON_DATASET_PATH')
+    FRAME_DATASET_PATH = os.getenv("FRAME_DATASET_PATH")
+
     final_shape = (CAMERA_WIDTH, CAMERA_HEIGHT)
     json_glob_path = JSON_PATH + '/*/*.json'
 
@@ -138,6 +157,7 @@ if __name__ == '__main__':
         num_type_of_lines=NUM_TYPE_OF_LINES,
         json_glob_path=json_glob_path,
         final_shape=final_shape,
+        frame_dataset_path=FRAME_DATASET_PATH,
     )
     converter.exec()
     print('Done...')
