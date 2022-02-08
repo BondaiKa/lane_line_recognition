@@ -8,11 +8,12 @@ import os
 from dotenv import load_dotenv
 import random
 import h5py
-
+import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 from utils import one_hot_list_encoder
 from vil_100_utils import VIL100HDF5
 import logging
+from utils import test_generator
 
 log = logging.getLogger(__name__)
 
@@ -81,12 +82,12 @@ class SimpleFrameGenerator(Sequence):
 
     def __get_frame_from_file(self, frame_path: str) -> np.ndarray:
         frame = tf.keras.utils.load_img(frame_path,
-                                            color_mode='rgb',
-                                            target_size=(self.target_shape[1], self.target_shape[0])
-                                            )
+                                        color_mode='rgb',
+                                        target_size=(self.target_shape[1], self.target_shape[0])
+                                        )
         frame = tf.keras.preprocessing.image.img_to_array(frame)
         frame = frame * self.rescale
-        frame = np.expand_dims(frame,0)
+        frame = np.expand_dims(frame, 0)
         return frame
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
@@ -183,6 +184,7 @@ class SimpleFrameDataGen:
                                     json_files=json_files,
                                     *args, **kwargs)
 
+
 if __name__ == "__main__":
     load_dotenv()
 
@@ -223,9 +225,4 @@ if __name__ == "__main__":
         max_num_points=MAX_NUM_POINTS, num_type_of_lines=NUM_TYPE_OF_LINES
     )
 
-    for item in train_generator:
-        print(item)
-
-    # for item in validation_generator:
-    #     print([x.shape for x in item[1]])
-    #     break
+    test_generator(train_generator, draw_line=True)
