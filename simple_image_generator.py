@@ -31,7 +31,7 @@ class SimpleFrameGenerator(Sequence):
                  max_lines_per_frame=2,
                  rescale=1 / 255.,  # TODO @Karim: include and use later
                  batch_size: int = 8,
-                 target_shape: Tuple[int, int] = (1280, 960),
+                 target_shape: Tuple[int, int] = (640, 480),
                  shuffle: bool = False,
                  nb_channel: int = 3,  # TODO: Use rgb later
                  files: Optional[List[str]] = None,
@@ -82,7 +82,7 @@ class SimpleFrameGenerator(Sequence):
 
     def __get_frame_from_file(self, frame_path: str) -> np.ndarray:
         frame = tf.keras.utils.load_img(frame_path,
-                                        color_mode='rgb',
+                                        color_mode='grayscale',
                                         target_size=(self.target_shape[1], self.target_shape[0])
                                         )
         frame = tf.keras.preprocessing.image.img_to_array(frame)
@@ -107,7 +107,8 @@ class SimpleFrameGenerator(Sequence):
             frame = self.__get_frame_from_file(_frame)
             frame_list = np.vstack((frame_list, frame))
 
-        return (frame_list), (polylines_list,) + tuple(np.hsplit(labels_list, self.max_lines_per_frame))
+        return (frame_list), tuple(np.hsplit(polylines_list, self.max_lines_per_frame)) + tuple(
+            np.hsplit(labels_list, self.max_lines_per_frame))
 
 
 class SimpleFrameDataGen:
@@ -216,13 +217,15 @@ if __name__ == "__main__":
     train_generator = data_gen.flow_from_directory(
         subset='training', shuffle=True, batch_size=BATCH_SIZE,
         number_files=AMOUNT_OF_FRAMES, max_lines_per_frame=MAX_LINES_PER_FRAME,
-        max_num_points=MAX_NUM_POINTS, num_type_of_lines=NUM_TYPE_OF_LINES
+        max_num_points=MAX_NUM_POINTS, num_type_of_lines=NUM_TYPE_OF_LINES,
+        target_shape=input_shape,
     )
 
     validation_generator = data_gen.flow_from_directory(
         subset='validation', shuffle=True, batch_size=BATCH_SIZE,
         number_files=AMOUNT_OF_FRAMES, max_lines_per_frame=MAX_LINES_PER_FRAME,
-        max_num_points=MAX_NUM_POINTS, num_type_of_lines=NUM_TYPE_OF_LINES
+        max_num_points=MAX_NUM_POINTS, num_type_of_lines=NUM_TYPE_OF_LINES,
+        target_shape=input_shape,
     )
 
     test_generator(train_generator, draw_line=True)

@@ -14,10 +14,13 @@ def test_generator(generator, draw_line=False) -> None:
     """Test frame and labels on generator"""
     original_frames, original_labels = generator[0]
     original_frame = original_frames[0]
-    polylines, original_label_1, original_label_2 = original_labels[0][0], original_labels[1][0], original_labels[2][0]
+    polyline_1, polyline_2, original_label_1, original_label_2 = original_labels[0][0], original_labels[1][0], \
+                                                                 original_labels[2][0], original_labels[3][0]
 
     if draw_line:
-        original_frame = cv2.polylines(original_frame, np.int32(polylines).reshape((-1, 1, 2)), 1, color=(255, 0, 255),
+        original_frame = cv2.polylines(original_frame, np.int32(polyline_1).reshape((-1, 1, 2)), 1, color=(255, 0, 255),
+                                       thickness=5)
+        original_frame = cv2.polylines(original_frame, np.int32(polyline_2).reshape((-1, 1, 2)), 1, color=(0, 255, 0),
                                        thickness=5)
     cv2.imshow(f'frame_with_polyline_{original_frame.shape}', original_frame)
     cv2.waitKey(0)
