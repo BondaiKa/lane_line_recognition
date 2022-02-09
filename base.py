@@ -6,6 +6,7 @@ import numpy as np
 from typing import Tuple, List
 from vil_100_utils import get_colour_from_one_hot_vector
 from build_model import build_model
+import tensorflow as tf
 
 log = logging.getLogger(__name__)
 
@@ -96,8 +97,14 @@ def transform_frame(frame: np.ndarray, width: int, height: int, reverse_flag=Fal
 class FrameHandler(metaclass=MetaSingleton):
     """Draw polyline and other necessary data to frame"""
 
-    def __init__(self, model_weights_path: str, width: int,
-                 height: int, max_lines_per_frame: int, max_num_points: int, num_type_of_lines: int):
+    def __init__(self, model_path: str, width: int,
+                 height: int,
+                 max_lines_per_frame: int,
+                 max_num_points: int,
+                 num_type_of_lines: int,
+                 neural_net_width: int,
+                 neural_net_height: int,
+                 ):
         """
         :param num_type_of_lines: max lane line type (dotted, solid etc)
         :param model_weights_path:  neural net weights with h5 format path
@@ -106,14 +113,13 @@ class FrameHandler(metaclass=MetaSingleton):
         :param max_lines_per_frame: maximum num of lines in a frame
         :param max_num_points: maximum number of points(x,y) per polylines
         """
-        model, pre_trained_model = build_model(polyline_output_shape=max_num_points * 2 * max_lines_per_frame,
-                                                      label_output_shape=num_type_of_lines,
-                                                      input_shape=(width, height, 3))
-        model.load_weights(model_weights_path)
+        model = tf.keras.models.load_model(model_path)
         self.model = model
         self.width = width
         self.height = height
         self.max_lines_per_frame = max_lines_per_frame
+        self.neural_net_width = neural_net_width
+        self.neural_net_height = neural_net_height
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         ###
@@ -121,8 +127,8 @@ class FrameHandler(metaclass=MetaSingleton):
         ###
         width, height = self.width, self.height
 
-        log.debug(f"Resizing frame to {width}x{height} resolution...")
-        frame = cv2.resize(frame, dsize=(width, height), interpolation=cv2.INTER_AREA)
+        log.debug(f"Resizing frame to {self.neural_net_width}x{self.neural_net_height} resolution...")
+        frame = cv2.resize(frame, dsize=(self.neural_net_width, self.neural_net_height), interpolation=cv2.INTER_AREA)
         frame = frame / 255
         # TODO @Karim use transform later
         # presp_frame = transform_frame(frame, width, height)
@@ -132,10 +138,11 @@ class FrameHandler(metaclass=MetaSingleton):
         return frame
 
     def recognize(self, frame: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        frame = frame.reshape(1, self.width, self.height, 3)
+        frame = tf.image.rgb_to_grayscale(frame).numpy()
+        frame = frame.reshape(1, self.neural_net_width, self.neural_net_height, 1)
         return self.model.predict(frame)
 
-    def postprocess_frame(self, polylines: np.ndarray, labels: np.ndarray) -> Tuple[List[np.ndarray]]:
+    def postprocess_frame(self, polylines: List[np.ndarray], labels: List[np.ndarray]) -> Tuple[List[np.ndarray]]:
         """
         Get Splitted polylines and labels values for 6 numpy arrays respectively
 
@@ -143,10 +150,10 @@ class FrameHandler(metaclass=MetaSingleton):
         :param labels:
         :return:
         """
-        polylines = np.hsplit(polylines, self.max_lines_per_frame)
         polylines = self.filter_coordinates(polylines)
         colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label > 0.5, 1, 0)), labels))
-        return zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors)))
+        res = tuple(zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))))
+        return res if res else (list(),list())
 
     def filter_coordination_for_resolution(self, polyline: np.ndarray) -> np.ndarray:
         valid = ((polyline[:, 0] > 0) & (polyline[:, 1] > 0)
