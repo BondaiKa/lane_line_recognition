@@ -90,7 +90,7 @@ class SimpleFrameGenerator(Sequence):
         frame = np.expand_dims(frame, 0)
         return frame
 
-    def __getitem__(self, idx) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+    def __getitem__(self, idx) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         batch_frames_path = self.files[idx * self.batch_size:
                                        (idx + 1) * self.batch_size]
         batch_json_path = self.json_files[idx * self.batch_size:
