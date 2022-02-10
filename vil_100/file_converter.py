@@ -3,7 +3,7 @@ from typing import List, Dict, Tuple
 import json
 from lane_line_recognition.vil_100.vil_100_utils import Vil100Json, LANE_ID_FULL_LIST, LineType, get_valid_attribute
 import numpy as np
-from utils import one_hot_list_encoder
+from lane_line_recognition.utils import one_hot_list_encoder
 import glob
 import os
 from pathlib import Path
@@ -29,6 +29,7 @@ class VILLJsonConverter:
                  json_glob_path: str,
                  final_shape: Tuple[int, int],
                  frame_dataset_path: str,
+                 rescale_polyline_coef: float,
                  ):
 
         self.max_lines_per_frame = max_lines_per_frame
@@ -38,10 +39,11 @@ class VILLJsonConverter:
         self.files_count = len(self.json_files)
         self.frame_dataset_path = frame_dataset_path
         self.final_shape = final_shape
+        self.rescale_polyline_coef = rescale_polyline_coef
 
     def __rescale_coordinates(self, row: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
-        return int(row[0] / initial_width * self.final_shape[0]), \
-               int(row[1] / initial_height * self.final_shape[1])
+        return int(row[0] / initial_width * self.final_shape[0]) * self.rescale_polyline_coef, \
+               int(row[1] / initial_height * self.final_shape[1]) * self.rescale_polyline_coef
 
     def __rescale_polylines(self, polylines: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
         """Rescale coordinates due to new frame resolution"""
@@ -57,7 +59,7 @@ class VILLJsonConverter:
             lane[Vil100Json.POINTS])
         points = self.__rescale_polylines(points, initial_width=initial_width, initial_height=initial_height).flatten()
         points = np.pad(points, pad_width=(0, self.max_num_points * 2 - points.shape[0]),
-                        mode='constant', constant_values=(-100,))
+                        mode='constant', constant_values=(-1,))
         # TODO @Karim: remember below `label.get(label)` is index 1,2,3,4
         label = get_valid_attribute(lane.get(Vil100Json.ATTRIBUTE, LineType.NO_LINE))
         labels = one_hot_list_encoder(label, self.num_type_of_lines)
@@ -147,6 +149,7 @@ if __name__ == '__main__':
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     JSON_PATH = os.getenv('JSON_DATASET_PATH')
     FRAME_DATASET_PATH = os.getenv("FRAME_DATASET_PATH")
+    RESCALE_POLYLINE_COEFFICIENT = float(os.getenv("RESCALE_POLYLINE_COEFFICIENT"))
 
     final_shape = (CAMERA_WIDTH, CAMERA_HEIGHT)
     json_glob_path = JSON_PATH + '/*/*.json'
@@ -158,6 +161,7 @@ if __name__ == '__main__':
         json_glob_path=json_glob_path,
         final_shape=final_shape,
         frame_dataset_path=FRAME_DATASET_PATH,
+        rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
     )
     converter.exec()
-    print('Done...')
+    log.info('Done...')

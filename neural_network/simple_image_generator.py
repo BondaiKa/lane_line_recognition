@@ -29,26 +29,23 @@ class SimpleFrameGenerator(Sequence):
                  num_type_of_lines=4,
                  max_num_points=91,
                  max_lines_per_frame=2,
-                 rescale=1 / 255.,  # TODO @Karim: include and use later
+                 rescale=1 / 255.,
                  batch_size: int = 8,
                  target_shape: Tuple[int, int] = (640, 480),
                  shuffle: bool = False,
-                 nb_channel: int = 3,  # TODO: Use rgb later
+                 color_mode: str = 'grayscale',  # TODO: Use rgb later
                  files: Optional[List[str]] = None,
                  json_files: Optional[List[str]] = None):
         """
-        :param subset: training or validation data
-        :param max_lines_per_frame: maxinum number of lines per frame
+        :param max_lines_per_frame: maximum number of lines per frame
         :param max_num_points: maximum number of points un one polyline
         :param num_type_of_lines: number of possible lines on road
         :param rescale:
         :param batch_size: batch size of the dataset
         :param target_shape: final size for NN input
         :param shuffle: shuffle flag of frames sequences
-        :param split: split dataset to train/test
-        :param nb_channel: grayscaled or RGB frames
-        :param frame_glob_path: glob pattern of frames
-        :param json_glob_path: glob pattern path of jsons
+        :param color_mode: `grayscale` or `rgb` color reading frame mod
+        :param json_files: list of json files that contain info about a frame
         """
         self.max_lines_per_frame = max_lines_per_frame
         self.max_num_points = max_num_points
@@ -57,7 +54,7 @@ class SimpleFrameGenerator(Sequence):
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.target_shape = target_shape
-        self.nb_channel = nb_channel
+        self.color_mode = color_mode
         self.files = files
         self.json_files = json_files
         self.files_count = len(self.files)
@@ -70,7 +67,8 @@ class SimpleFrameGenerator(Sequence):
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
-    def __get_polyline_and_label_from_file(self, json_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def __get_polyline_and_label_from_file(json_path: str) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get from hdf5 all polylines and their labels
         :param json_path: path of json file
@@ -82,7 +80,7 @@ class SimpleFrameGenerator(Sequence):
 
     def __get_frame_from_file(self, frame_path: str) -> np.ndarray:
         frame = tf.keras.utils.load_img(frame_path,
-                                        color_mode='grayscale',
+                                        color_mode=self.color_mode,
                                         target_size=(self.target_shape[1], self.target_shape[0])
                                         )
         frame = tf.keras.preprocessing.image.img_to_array(frame)
@@ -144,7 +142,7 @@ class SimpleFrameDataGen:
         Get generator for subset
         :param subset: 'training' or 'validation'
         :param shuffle: flag for shuffling
-        :param number_files: rectrict max number of files from dataset
+        :param number_files: restrict max number of files from dataset
         :param args: args for specific dataset
         :param kwargs: kwargs for specific dataset
         :return: Specific generator for specific subset
