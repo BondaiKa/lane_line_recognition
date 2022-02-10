@@ -10,10 +10,9 @@ import random
 import h5py
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
-from utils import one_hot_list_encoder
-from vil_100_utils import VIL100HDF5
+from lane_line_recognition.utils import test_generator
+from lane_line_recognition.vil_100.vil_100_utils import VIL100HDF5
 import logging
-from utils import test_generator
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class SimpleFrameGenerator(Sequence):
                  batch_size: int = 8,
                  target_shape: Tuple[int, int] = (640, 480),
                  shuffle: bool = False,
-                 color_mode: str = 'grayscale',  # TODO: Use rgb later
+                 color_mode: str = 'grayscale',
                  files: Optional[List[str]] = None,
                  json_files: Optional[List[str]] = None):
         """

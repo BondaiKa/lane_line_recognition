@@ -103,6 +103,7 @@ class FrameHandler(metaclass=MetaSingleton):
                  num_type_of_lines: int,
                  neural_net_width: int,
                  neural_net_height: int,
+                 rescale_polyline_coef: float
                  ):
         """
         :param num_type_of_lines: max lane line type (dotted, solid etc)
@@ -119,6 +120,7 @@ class FrameHandler(metaclass=MetaSingleton):
         self.max_lines_per_frame = max_lines_per_frame
         self.neural_net_width = neural_net_width
         self.neural_net_height = neural_net_height
+        self.rescale_polyline_coef = rescale_polyline_coef
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         ###
@@ -143,16 +145,17 @@ class FrameHandler(metaclass=MetaSingleton):
 
     def postprocess_frame(self, polylines: List[np.ndarray], labels: List[np.ndarray]) -> Tuple[List[np.ndarray]]:
         """
-        Get Splitted polylines and labels values for 6 numpy arrays respectively
+        Get Splitted polylines and labels values (number of line)-n numpy arrays respectively
 
         :param polylines:
         :param labels:
         :return:
         """
         polylines = self.filter_coordinates(polylines)
+        polylines = [ polyline / self.rescale_polyline_coef for polyline in polylines]
         colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label > 0.5, 1, 0)), labels))
         res = tuple(zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))))
-        return res if res else (list(),list())
+        return res if res else (list(), list())
 
     def filter_coordination_for_resolution(self, polyline: np.ndarray) -> np.ndarray:
         valid = ((polyline[:, 0] > 0) & (polyline[:, 1] > 0)

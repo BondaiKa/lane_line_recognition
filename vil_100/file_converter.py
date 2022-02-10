@@ -42,8 +42,8 @@ class VILLJsonConverter:
         self.rescale_polyline_coef = rescale_polyline_coef
 
     def __rescale_coordinates(self, row: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
-        return int(row[0] / initial_width * self.final_shape[0]) * self.rescale_polyline_coef, \
-               int(row[1] / initial_height * self.final_shape[1]) * self.rescale_polyline_coef
+        return row[0] / initial_width * self.final_shape[0] * self.rescale_polyline_coef, \
+               row[1] / initial_height * self.final_shape[1] * self.rescale_polyline_coef
 
     def __rescale_polylines(self, polylines: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
         """Rescale coordinates due to new frame resolution"""
@@ -136,8 +136,8 @@ class VILLJsonConverter:
 
             with h5py.File(f"{'/'.join(root_path)}/{frame_name}.hdf5", "w") as f:
                 grp = f.create_group(VIL100HDF5.GROUP_NAME)
-                grp.create_dataset(VIL100HDF5.POLYLINES_DATASET_NAME, data=polylines, dtype='int32')
-                grp.create_dataset(VIL100HDF5.LABELS_DATASET_NAME, data=labels, dtype='int32')
+                grp.create_dataset(VIL100HDF5.POLYLINES_DATASET_NAME, data=polylines, dtype='float32')
+                grp.create_dataset(VIL100HDF5.LABELS_DATASET_NAME, data=labels, dtype='float32')
 
 
 if __name__ == '__main__':

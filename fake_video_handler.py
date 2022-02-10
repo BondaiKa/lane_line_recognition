@@ -20,7 +20,6 @@ class FakeVideoHandler(AbstractVideoHandler):
             polyline_1, polyline_2, label_1, label_2 = frame_handler.recognize(frame=frame)
             polylines, colors = frame_handler.postprocess_frame(polylines=[polyline_1, polyline_2],
                                                                 labels=[label_1, label_2])
-
             #TODO @Karim: rescale polyline after reducing values in the dataset
             result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
             cv2.imshow(f'Final frame', result)
