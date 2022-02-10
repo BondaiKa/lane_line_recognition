@@ -6,10 +6,18 @@ LANE_ID_FULL_LIST = set(range(1, 3))
 
 class Vil100Json:
     ANNOTATIONS = 'annotations'
+    #Annotations
     ATTRIBUTE = 'attribute'
     LANE = 'lane'
     LANE_ID = 'lane_id'
     POINTS = 'points'
+
+    INFO = 'info'
+    #Info
+    IMAGE_PATH = 'image_path'
+    HEIGHT = 'height'
+    WIDTH = 'width'
+
 
 
 class VIL100Attribute:
@@ -48,6 +56,13 @@ VIL_100_colour_line = {
     # 9: (255, 0, 0),  # double white dotted solid
     # 10: (255, 0, 0),  # double solid white and yellow
 }
+
+
+class VIL100HDF5:
+    ROOT_FOLDER = 'hdf5'
+    GROUP_NAME = 'frame_polylines_labels'
+    POLYLINES_DATASET_NAME = 'polylines'
+    LABELS_DATASET_NAME = 'labels'
 
 
 def get_valid_attribute(attr: int) -> int:

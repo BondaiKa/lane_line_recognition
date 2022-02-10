@@ -4,3 +4,5 @@ lane_line
 /VIL100/
 *.h5
 *.env
+hdf5/
+*.json
