@@ -66,7 +66,7 @@ class VIL100HDF5:
 
 
 def get_valid_attribute(attr: int) -> int:
-    """Change attribute from VIL100 dataset to normal number without missings"""
+    """Change attribute from VIL100_dataset dataset to normal number without missings"""
     _VIL_100_attributes = {
         LineType.NO_LINE: LineType.NO_LINE,
         VIL100Attribute.SINGLE_WHITE_SOLID: LineType.SINGLE_WHITE_SOLID,

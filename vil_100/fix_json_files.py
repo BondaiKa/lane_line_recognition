@@ -1,6 +1,5 @@
 import json
 from dotenv import load_dotenv
-import logging
 import os
 import glob
 import cv2
@@ -9,7 +8,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from vil_100_utils import Vil100Json
+from lane_line_recognition.vil_100.vil_100_utils import Vil100Json
 
 
 class JsonReviewer:

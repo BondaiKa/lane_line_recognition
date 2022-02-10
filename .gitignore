@@ -1,7 +1,7 @@
 .idea
 lane_line
 .DS_Store
-/VIL100/
+/VIL100_dataset/
 *.h5
 *.env
 hdf5/
