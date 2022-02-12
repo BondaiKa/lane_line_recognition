@@ -4,7 +4,7 @@ from typing import Union
 import cv2
 import numpy as np
 from typing import Tuple, List
-from lane_line_recognition.vil_100.vil_100_utils import get_colour_from_one_hot_vector
+from lane_line_recognition.vil_100.utils import get_colour_from_one_hot_vector
 import tensorflow as tf
 
 log = logging.getLogger(__name__)

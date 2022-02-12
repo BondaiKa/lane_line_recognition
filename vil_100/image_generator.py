@@ -11,7 +11,7 @@ import h5py
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 from lane_line_recognition.utils import test_generator
-from lane_line_recognition.vil_100.vil_100_utils import VIL100HDF5
+from lane_line_recognition.vil_100.utils import VIL100HDF5
 import logging
 
 log = logging.getLogger(__name__)

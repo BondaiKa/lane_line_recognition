@@ -8,7 +8,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from lane_line_recognition.vil_100.vil_100_utils import Vil100Json
+from lane_line_recognition.vil_100.utils import Vil100Json
 
 
 class JsonReviewer:
