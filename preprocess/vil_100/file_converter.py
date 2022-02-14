@@ -1,6 +1,7 @@
 import h5py
 from typing import List, Dict, Tuple
 import json
+from os.path import join, dirname
 from lane_line_recognition.preprocess.vil_100.utils import Vil100Json, LANE_ID_FULL_LIST, LineType, get_valid_attribute
 import numpy as np
 from lane_line_recognition.utils import one_hot_list_encoder
@@ -143,18 +144,21 @@ class VILJsonConverter(AbstractConverter):
 
 
 if __name__ == '__main__':
-    load_dotenv()
+    ENV_FILE_NAME = 'vil_100.env'
+    dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
+    load_dotenv(dotenv_path)
+
     CAMERA_WIDTH = int(os.getenv('CAMERA_WIDTH'))
     CAMERA_HEIGHT = int(os.getenv('CAMERA_HEIGHT'))
     MAX_LINES_PER_FRAME = int(os.getenv('MAX_LINES_PER_FRAME'))
     MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
-    JSON_PATH = os.getenv('JSON_DATASET_PATH')
+    JSON_DATASET_PATH = os.getenv('JSON_DATASET_PATH')
     FRAME_DATASET_PATH = os.getenv("FRAME_DATASET_PATH")
     RESCALE_POLYLINE_COEFFICIENT = float(os.getenv("RESCALE_POLYLINE_COEFFICIENT"))
 
     FINAL_SHAPE = (CAMERA_WIDTH, CAMERA_HEIGHT)
-    JSON_GLOB_PATH = JSON_PATH + '/*/*.json'
+    JSON_GLOB_PATH = JSON_DATASET_PATH + '/*/*.json'
 
     converter = VILJsonConverter(
         max_lines_per_frame=MAX_LINES_PER_FRAME,

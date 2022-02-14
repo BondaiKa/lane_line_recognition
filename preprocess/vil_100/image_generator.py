@@ -1,7 +1,8 @@
 import numpy as np
 import math
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Type
 import glob
+from os.path import join, dirname
 import os
 from dotenv import load_dotenv
 import random
@@ -105,83 +106,16 @@ class VIL100FrameGenerator(AbstractFrameGenerator, Sequence):
             np.hsplit(labels_list, self.max_lines_per_frame))
 
 
-class VIL100FrameDataGeneratorCreator(AbstractFrameGeneratorCreator):
-    TRAINING = 'training'
-    VALIDATION = 'validation'
+class VIL100FrameGeneratorCreator(AbstractFrameGeneratorCreator):
 
-    __reverse_dataset_type = {
-        TRAINING: VALIDATION,
-        VALIDATION: TRAINING
-    }
-    __dataset = {}
-
-    def __init__(self,
-                 rescale=1 / 255.,
-                 validation_split: Optional[float] = None,
-                 frame_glob_path: str = "",
-                 json_hdf5_glob_path: str = ""):
-        """
-        :param validation_split: split for train/validation sets
-        :param rescale:
-        :param frame_glob_path: glob pattern of frames
-        :param json_glob_path: glob pattern path of jsons
-        """
-        self.rescale = rescale
-        self.validation_split = validation_split
-
-        self.__frame_glob_path = frame_glob_path
-        self.__json_hdf5_glob_path = json_hdf5_glob_path
-
-    def flow_from_directory(self, subset: str = TRAINING,
-                            shuffle: bool = True, number_files: int = 2000, *args, **kwargs) -> VIL100FrameGenerator:
-        """
-        Get generator for subset
-        :param subset: 'training' or 'validation'
-        :param shuffle: flag for shuffling
-        :param number_files: restrict max number of files from dataset
-        :param args: args for specific dataset
-        :param kwargs: kwargs for specific dataset
-        :return: Specific generator for specific subset
-        """
-
-        files = sorted(glob.glob(self.__frame_glob_path))
-        log.info(f"Number of files in dataset: {len(files)}. Using in training/validation: {number_files}")
-        files = files[:number_files]
-
-        json_files = sorted(glob.glob(self.__json_hdf5_glob_path))[:number_files]
-        files_count = len(files)
-        json_files_count = len(json_files)
-
-        if files_count != json_files_count:
-            log.error(f"Dataset files error"
-                      f"Number of frames: ({files_count}). "
-                      f"Number of jsons({json_files_count}")
-            raise FileNotFoundError(
-                f"Numbers of frames and jsons are not equal!")
-
-        if not self.__reverse_dataset_type.get(subset):
-            log.error(f'Wrong subset value: "{subset}"')
-            raise ValueError(f'Wrong type of subset - {subset}. '
-                             f'Available types: {self.__reverse_dataset_type.keys()}')
-
-        if self.validation_split and 0.0 < self.validation_split < 1.0:
-            split = int(files_count * (1 - self.validation_split))
-            if subset == self.TRAINING:
-                files = files[:split]
-                json_files = json_files[:split]
-            else:
-                files = files[split:]
-                json_files = json_files[split:]
-
-        return VIL100FrameGenerator(rescale=self.rescale,
-                                    files=files,
-                                    shuffle=shuffle,
-                                    json_files=json_files,
-                                    *args, **kwargs)
+    def get_generator(self) -> Type[VIL100FrameGenerator]:
+        return VIL100FrameGenerator
 
 
 if __name__ == "__main__":
-    load_dotenv()
+    ENV_FILE_NAME = 'vil_100.env'
+    dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
+    load_dotenv(dotenv_path)
 
     AMOUNT_OF_FRAMES = 10000
     BATCH_SIZE = 32
@@ -199,14 +133,11 @@ if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_hdf5_glob_path = JSON_HDF5_DATASET_PATH + '/*/*.hdf5'
 
-    data_gen = VIL100FrameDataGeneratorCreator(
+    data_gen = VIL100FrameGeneratorCreator(
         validation_split=VALIDATION_SPLIT,
         frame_glob_path=image_glob_path,
         json_hdf5_glob_path=json_hdf5_glob_path,
     )
-
-    # train_generator = data_gen.flow_from_directory(subset='training', shuffle=True, batch_size=BATCH_SIZE)
-    # validation_generator = data_gen.flow_from_directory(subset='validation', shuffle=True, batch_size=BATCH_SIZE)
 
     train_generator = data_gen.flow_from_directory(
         subset='training', shuffle=True, batch_size=BATCH_SIZE,

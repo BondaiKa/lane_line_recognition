@@ -7,6 +7,7 @@ import os
 from typing import Tuple
 import logging
 import cv2
+from os.path import join, dirname
 from utils import TuSimpleJson, TuSimpleHdf5
 from pathlib import Path
 from lane_line_recognition.base import AbstractConverter
@@ -15,8 +16,6 @@ log = logging.getLogger(__name__)
 
 
 class TuSimpleJsonConverter(AbstractConverter):
-    # TODO @Karim: check frame's resolution. Is it `1280×720`?
-    # TODO @Karim: investigate and decide to add labels
     def __init__(self,
                  max_lines_per_frame: int,
                  max_num_points: int,
@@ -50,13 +49,14 @@ class TuSimpleJsonConverter(AbstractConverter):
         frame_path = json_line.pop(TuSimpleJson.frame_path)
         frame_full_path = self.frame_dataset_path + frame_path
         self._verify_frame_shape(frame_full_path)
-
+        # TODO @Karim: check frame's resolution. Is it `1280×720`?
         lanes = np.array(json_line[TuSimpleJson.lanes])
         lanes = np.where(lanes > 0, lanes / self.TU_SIMPLE_EXPECTED_SHAPE[0] * self.final_shape_to_convert[0], lanes)
         lanes = np.where(lanes == -2, -1, lanes)
         return lanes, frame_path
 
     def get_data_from_file(self, json_path: str):
+        # TODO @Karim: investigate and decide to add labels
         with open(json_path, 'r') as f:
             for json_frame_data_line in f.readlines():
                 return self.get_polylines_from_json_line(json_frame_data_line)
@@ -71,7 +71,10 @@ class TuSimpleJsonConverter(AbstractConverter):
 
 
 if __name__ == '__main__':
-    load_dotenv()
+    ENV_FILE_NAME = 'tu_simple.env'
+    dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
+    load_dotenv(dotenv_path)
+    
     NEURAL_NETWORK_WIDTH = int(os.getenv('NEURAL_NETWORK_WIDTH'))
     NEURAL_NETWORK_HEIGHT = int(os.getenv('NEURAL_NETWORK_HEIGHT'))
     TU_SIMPLE_JSON_PATH = os.getenv('TU_SIMPLE_JSON_PATH')
