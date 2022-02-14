@@ -11,11 +11,12 @@ from tensorflow.keras.utils import Sequence
 from lane_line_recognition.utils import test_generator
 from lane_line_recognition.preprocess.vil_100.utils import VIL100HDF5
 import logging
+from lane_line_recognition.base import AbstractFrameGenerator, AbstractFrameGeneratorCreator
 
 log = logging.getLogger(__name__)
 
 
-class SimpleFrameGenerator(Sequence):
+class VIL100FrameGenerator(AbstractFrameGenerator, Sequence):
     """Sequence of frames generator
 
     Usage for training NN that could process independent
@@ -64,8 +65,7 @@ class SimpleFrameGenerator(Sequence):
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
-    @staticmethod
-    def __get_polyline_and_label_from_file(json_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    def get_data_from_file(self, json_path: str) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get from hdf5 all polylines and their labels
         :param json_path: path of json file
@@ -75,7 +75,7 @@ class SimpleFrameGenerator(Sequence):
         group = file.get(VIL100HDF5.GROUP_NAME)
         return group.get(VIL100HDF5.POLYLINES_DATASET_NAME), group.get(VIL100HDF5.LABELS_DATASET_NAME)
 
-    def __get_frame_from_file(self, frame_path: str) -> np.ndarray:
+    def get_frame_from_file(self, frame_path: str) -> np.ndarray:
         frame = tf.keras.utils.load_img(frame_path,
                                         color_mode=self.color_mode,
                                         target_size=(self.target_shape[1], self.target_shape[0])
@@ -91,22 +91,21 @@ class SimpleFrameGenerator(Sequence):
         batch_json_path = self.json_files[idx * self.batch_size:
                                           (idx + 1) * self.batch_size]
 
-        polylines_list, labels_list = self.__get_polyline_and_label_from_file(batch_json_path[0])
-        frame_list = self.__get_frame_from_file(batch_frames_path[0])
+        polylines_list, labels_list = self.get_data_from_file(batch_json_path[0])
+        frame_list = self.get_frame_from_file(batch_frames_path[0])
 
         for _frame, _json in zip(batch_frames_path[1:], batch_json_path[1:]):
-            polylines, labels = self.__get_polyline_and_label_from_file(_json)
+            polylines, labels = self.get_data_from_file(_json)
             polylines_list = np.vstack((polylines_list, polylines))
             labels_list = np.vstack((labels_list, labels))
-
-            frame = self.__get_frame_from_file(_frame)
+            frame = self.get_frame_from_file(_frame)
             frame_list = np.vstack((frame_list, frame))
 
         return (frame_list), tuple(np.hsplit(polylines_list, self.max_lines_per_frame)) + tuple(
             np.hsplit(labels_list, self.max_lines_per_frame))
 
 
-class SimpleFrameDataGen:
+class VIL100FrameDataGeneratorCreator(AbstractFrameGeneratorCreator):
     TRAINING = 'training'
     VALIDATION = 'validation'
 
@@ -134,7 +133,7 @@ class SimpleFrameDataGen:
         self.__json_hdf5_glob_path = json_hdf5_glob_path
 
     def flow_from_directory(self, subset: str = TRAINING,
-                            shuffle: bool = True, number_files: int = 2000, *args, **kwargs) -> SimpleFrameGenerator:
+                            shuffle: bool = True, number_files: int = 2000, *args, **kwargs) -> VIL100FrameGenerator:
         """
         Get generator for subset
         :param subset: 'training' or 'validation'
@@ -174,7 +173,7 @@ class SimpleFrameDataGen:
                 files = files[split:]
                 json_files = json_files[split:]
 
-        return SimpleFrameGenerator(rescale=self.rescale,
+        return VIL100FrameGenerator(rescale=self.rescale,
                                     files=files,
                                     shuffle=shuffle,
                                     json_files=json_files,
@@ -200,7 +199,7 @@ if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_hdf5_glob_path = JSON_HDF5_DATASET_PATH + '/*/*.hdf5'
 
-    data_gen = SimpleFrameDataGen(
+    data_gen = VIL100FrameDataGeneratorCreator(
         validation_split=VALIDATION_SPLIT,
         frame_glob_path=image_glob_path,
         json_hdf5_glob_path=json_hdf5_glob_path,

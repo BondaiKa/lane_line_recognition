@@ -11,3 +11,9 @@ from .frame import (
 from .video import (
     AbstractVideoHandler,
 )
+
+from .image_generator import (
+    AbstractConverter,
+    AbstractFrameGenerator,
+    AbstractFrameGeneratorCreator,
+)

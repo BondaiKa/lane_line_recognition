@@ -11,6 +11,7 @@ from lane_line_recognition.preprocess.vil_100.utils import VIL100HDF5
 from fix_json_files import JsonReviewer
 import cv2
 from typing import Union
+from lane_line_recognition.base import AbstractConverter
 
 from dotenv import load_dotenv
 import logging
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 Lane_type = List[Dict[str, int]]
 
 
-class VILLJsonConverter:
+class VILJsonConverter(AbstractConverter):
 
     def __init__(self,
                  max_lines_per_frame: int,
@@ -65,7 +66,7 @@ class VILLJsonConverter:
         labels = one_hot_list_encoder(label, self.num_type_of_lines)
         return points, labels
 
-    def __get_polyline_and_label_from_file(self, json_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    def get_data_from_file(self, json_path: str) -> Tuple[np.ndarray, np.ndarray]:
         """
         Retrieve from json file polylines and labels and format to nn input
 
@@ -125,7 +126,7 @@ class VILLJsonConverter:
     def exec(self) -> None:
         """Convert and save json files to new hdf5 files"""
         for json_file_path in self.json_files:
-            polylines, labels = self.__get_polyline_and_label_from_file(json_file_path)
+            polylines, labels = self.get_data_from_file(json_file_path)
 
             full_path_list = json_file_path.split('/')
             full_path_list[-3] = VIL100HDF5.ROOT_FOLDER
@@ -151,15 +152,15 @@ if __name__ == '__main__':
     FRAME_DATASET_PATH = os.getenv("FRAME_DATASET_PATH")
     RESCALE_POLYLINE_COEFFICIENT = float(os.getenv("RESCALE_POLYLINE_COEFFICIENT"))
 
-    final_shape = (CAMERA_WIDTH, CAMERA_HEIGHT)
-    json_glob_path = JSON_PATH + '/*/*.json'
+    FINAL_SHAPE = (CAMERA_WIDTH, CAMERA_HEIGHT)
+    JSON_GLOB_PATH = JSON_PATH + '/*/*.json'
 
-    converter = VILLJsonConverter(
+    converter = VILJsonConverter(
         max_lines_per_frame=MAX_LINES_PER_FRAME,
         max_num_points=MAX_NUM_POINTS,
         num_type_of_lines=NUM_TYPE_OF_LINES,
-        json_glob_path=json_glob_path,
-        final_shape=final_shape,
+        json_glob_path=JSON_GLOB_PATH,
+        final_shape=FINAL_SHAPE,
         frame_dataset_path=FRAME_DATASET_PATH,
         rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
     )
