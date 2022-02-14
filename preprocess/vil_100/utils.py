@@ -6,18 +6,17 @@ LANE_ID_FULL_LIST = set(range(1, 3))
 
 class Vil100Json:
     ANNOTATIONS = 'annotations'
-    #Annotations
+    # Annotations
     ATTRIBUTE = 'attribute'
     LANE = 'lane'
     LANE_ID = 'lane_id'
     POINTS = 'points'
 
     INFO = 'info'
-    #Info
+    # Info
     IMAGE_PATH = 'image_path'
     HEIGHT = 'height'
     WIDTH = 'width'
-
 
 
 class VIL100Attribute:

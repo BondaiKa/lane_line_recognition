@@ -1,8 +1,6 @@
-from skimage.io import imread
-from skimage.transform import resize
 import numpy as np
 import math
-from typing import Tuple, List, Dict, Optional
+from typing import Tuple, List, Optional
 import glob
 import os
 from dotenv import load_dotenv
@@ -11,7 +9,7 @@ import h5py
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 from lane_line_recognition.utils import test_generator
-from lane_line_recognition.vil_100.utils import VIL100HDF5
+from lane_line_recognition.preprocess.vil_100.utils import VIL100HDF5
 import logging
 
 log = logging.getLogger(__name__)

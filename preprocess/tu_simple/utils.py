@@ -3,6 +3,7 @@ class TuSimpleJson:
     lanes = 'lanes'
     lane_heights = 'h_samples'
 
+
 class TuSimpleHdf5:
     group_name = 'polylines'
     dataset_name = 'polylines_width'

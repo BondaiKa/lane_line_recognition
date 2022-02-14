@@ -1,13 +1,13 @@
 import h5py
 from typing import List, Dict, Tuple
 import json
-from lane_line_recognition.vil_100.utils import Vil100Json, LANE_ID_FULL_LIST, LineType, get_valid_attribute
+from lane_line_recognition.preprocess.vil_100.utils import Vil100Json, LANE_ID_FULL_LIST, LineType, get_valid_attribute
 import numpy as np
 from lane_line_recognition.utils import one_hot_list_encoder
 import glob
 import os
 from pathlib import Path
-from lane_line_recognition.vil_100.utils import VIL100HDF5
+from lane_line_recognition.preprocess.vil_100.utils import VIL100HDF5
 from fix_json_files import JsonReviewer
 import cv2
 from typing import Union

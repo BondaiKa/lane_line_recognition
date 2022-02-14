@@ -1,5 +1,5 @@
 from .base import MetaSingleton
-from lane_line_recognition.vil_100.utils import get_colour_from_one_hot_vector
+from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector
 from typing import Tuple, List
 import numpy as np
 import cv2
