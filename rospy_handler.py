@@ -1,5 +1,5 @@
 import rospy
-from .base import AbstractVideoHandler, FrameHandler
+from lane_line_recognition.base.base import AbstractVideoHandler, FrameHandler
 from geometry_msgs.msg import PoseArray
 import cv2
 from typing import Union

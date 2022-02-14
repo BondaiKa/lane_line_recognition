@@ -1,96 +1,13 @@
-import logging
-from abc import ABC
-from typing import Union
-import cv2
-import numpy as np
-from typing import Tuple, List
+from .base import MetaSingleton
 from lane_line_recognition.vil_100.utils import get_colour_from_one_hot_vector
+from typing import Tuple, List
+import numpy as np
+import cv2
 import tensorflow as tf
 
+import logging
+
 log = logging.getLogger(__name__)
-
-
-class MetaSingleton(type):
-    """Metaclass for create singleton"""
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(MetaSingleton, cls).__call__(*args, **kwargs)
-            log.debug(f'Create new {cls}')
-        return cls._instances[cls]
-
-
-class AbstractVideoHandler(ABC):
-    """Base Video handler"""
-
-    def __init__(self, camera_path: Union[str, int]):
-        self.video = cv2.VideoCapture(camera_path)
-
-    def process(self):
-        """start to capture video"""
-        raise NotImplemented
-
-    def release(self):
-        """release camera"""
-        self.video.release()
-
-    def exec(self):
-        log.info("Start video processing...")
-        self.process()
-        log.info("End video processing...")
-
-
-# TODO @Karim: remove after debugging perspective_transformation
-def draw_sequence_in_img(frame: np.ndarray, points: List[Tuple[int, int]], color: Tuple[int, int, int]) -> None:
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    fontScale = thickness = 3
-    lineType = 2
-    frame_points = frame.copy()
-    for num, point in enumerate(points):
-        frame_points = cv2.putText(frame_points, str(num + 1), point, font, fontScale, color, thickness,
-                                   lineType)
-    cv2.imshow(f"Frame_with_points_{color[0]}_{color[1]}_{color[2]}", frame_points)
-
-
-def calculate_perspective_transform_matrix(width: int, height: int, reverse_flag=False) -> Tuple[
-    np.ndarray]:
-    """
-    Calculate transformation matrix for perspective transformation
-    :param width: frame width
-    :param height: frame height
-    :param reverse_flag: create reverse matrix for reverting to initial frame
-    :return: matrix for transformation the frame
-    """
-    # TODO @Karim: check on real Audi Q2 input frame
-    high_left_crd, high_right_crd = (550, 530), (700, 530)
-    down_left_crd, down_right_crd, = (0, height - 150), (width, height - 150)
-
-    initial_matrix = np.float32([[high_left_crd, high_right_crd,
-                                  down_left_crd, down_right_crd]])
-    final_matrix = np.float32([[(0, 0), (width, 0), (0, height), (width, height)]])
-
-    return cv2.getPerspectiveTransform(initial_matrix, final_matrix) \
-        if not reverse_flag else cv2.getPerspectiveTransform(final_matrix, initial_matrix)
-
-
-def transform_frame(frame: np.ndarray, width: int, height: int, reverse_flag=False) -> np.ndarray:
-    """
-    Perform perspective transformation
-    :param frame: frame
-    :param width: frame width
-    :param height: frame height
-    :param reverse_flag: cancel perspective transformation
-    :return: changed (un)transformed frame
-    """
-    if not reverse_flag:
-        initial_matrix = calculate_perspective_transform_matrix(width, height)
-        frame = cv2.warpPerspective(frame, initial_matrix, dsize=(width, height))
-    else:
-        final_matrix = calculate_perspective_transform_matrix(width, height, reverse_flag=True)
-        frame = cv2.warpPerspective(frame, final_matrix, dsize=(width, height))
-    return frame
 
 
 class FrameHandler(metaclass=MetaSingleton):
@@ -152,7 +69,7 @@ class FrameHandler(metaclass=MetaSingleton):
         :return:
         """
         polylines = self.filter_coordinates(polylines)
-        polylines = [ polyline / self.rescale_polyline_coef for polyline in polylines]
+        polylines = [polyline / self.rescale_polyline_coef for polyline in polylines]
         colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label > 0.5, 1, 0)), labels))
         res = tuple(zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))))
         return res if res else (list(), list())

@@ -44,7 +44,7 @@ class TuSimpleJsonConverter:
             raise ValueError('Shape of frame and expected is not equal! '
                              f'Real shape:{width}x{height}')
 
-    def get_polylines_from_json_line(self, line: str) -> np.ndarray:
+    def get_polylines_from_json_line(self, line: str) ->Tuple[np.ndarray, str]:
         json_line = json.loads(line)
         frame_path = json_line.pop(TuSimpleJson.frame_path)
         frame_full_path = self.frame_dataset_path + frame_path

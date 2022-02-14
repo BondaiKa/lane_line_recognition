@@ -58,3 +58,15 @@ def test_model(model, generator) -> None:
 
     cv2.imshow(original_frame * 255)
     cv2.waitKey(0)
+
+
+# TODO @Karim: remove after debugging perspective_transformation
+def draw_sequence_in_img(frame: np.ndarray, points: List[Tuple[int, int]], color: Tuple[int, int, int]) -> None:
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale = thickness = 3
+    lineType = 2
+    frame_points = frame.copy()
+    for num, point in enumerate(points):
+        frame_points = cv2.putText(frame_points, str(num + 1), point, font, fontScale, color, thickness,
+                                   lineType)
+    cv2.imshow(f"Frame_with_points_{color[0]}_{color[1]}_{color[2]}", frame_points)

@@ -1,4 +1,4 @@
-from base import AbstractVideoHandler, FrameHandler
+from lane_line_recognition.base import AbstractVideoHandler, FrameHandler
 import cv2
 import logging
 
