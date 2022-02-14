@@ -13,7 +13,8 @@ from .video import (
 )
 
 from .image_generator import (
-    AbstractConverter,
     AbstractFrameGenerator,
     AbstractFrameGeneratorCreator,
 )
+
+from .converter import AbstractConverter

@@ -75,53 +75,54 @@ class VILJsonConverter(AbstractConverter):
         """
         with open(json_path) as f:
             json_file: Dict[str, Union[int, dict]] = json.load(f)
-            image_path = json_file[Vil100Json.INFO][Vil100Json.IMAGE_PATH]
-            full_path = self.frame_dataset_path + '/' + image_path
-            frame = cv2.imread(full_path)
-            height, width = frame.shape[0], frame.shape[1]
-            json_file = JsonReviewer.fix_json_file(
-                json_file=json_file,
-                frame_real_height=height,
-                frame_real_width=width,
-                frame_path=image_path
-            )
 
-            width = json_file[Vil100Json.INFO][Vil100Json.WIDTH]
-            height = json_file[Vil100Json.INFO][Vil100Json.HEIGHT]
+        image_path = json_file[Vil100Json.INFO][Vil100Json.IMAGE_PATH]
+        full_path = self.frame_dataset_path + '/' + image_path
+        frame = cv2.imread(full_path)
+        height, width = frame.shape[0], frame.shape[1]
+        json_file = JsonReviewer.fix_json_file(
+            json_file=json_file,
+            frame_real_height=height,
+            frame_real_width=width,
+            frame_path=image_path
+        )
 
-            lanes: Lane_type = json_file[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
-            lanes = sorted(lanes, key=lambda lane: lane[Vil100Json.LANE_ID])
+        width = json_file[Vil100Json.INFO][Vil100Json.WIDTH]
+        height = json_file[Vil100Json.INFO][Vil100Json.HEIGHT]
 
-            if lanes:
-                polylines, labels = np.array([]), np.array([])
-                # TODO @Karim: check another params in json files like "occlusion"
-                exist_lane = [x[Vil100Json.LANE_ID] for x in lanes]
-                missed_lane = LANE_ID_FULL_LIST - set(exist_lane)
+        lanes: Lane_type = json_file[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
+        lanes = sorted(lanes, key=lambda lane: lane[Vil100Json.LANE_ID])
 
-                for lane_id in range(1, self.max_lines_per_frame + 1):
-                    if lane_id in missed_lane:
-                        points = np.zeros(shape=(self.max_num_points * 2))
-                        label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
-                    else:
-                        points, label = self.__get_polyline_with_label(
-                            lane=lanes[exist_lane.index(lane_id)],
-                            initial_width=width,
-                            initial_height=height
-                        )
+        if lanes:
+            polylines, labels = np.array([]), np.array([])
+            # TODO @Karim: check another params in json files like "occlusion"
+            exist_lane = [x[Vil100Json.LANE_ID] for x in lanes]
+            missed_lane = LANE_ID_FULL_LIST - set(exist_lane)
 
-                    if lane_id % 2 == 0:
-                        polylines = np.append(polylines, points)
-                        labels = np.append(labels, label)
-                    else:
-                        polylines = np.insert(polylines, 0, points)
-                        labels = np.insert(labels, 0, label)
+            for lane_id in range(1, self.max_lines_per_frame + 1):
+                if lane_id in missed_lane:
+                    points = np.zeros(shape=(self.max_num_points * 2))
+                    label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
+                else:
+                    points, label = self.__get_polyline_with_label(
+                        lane=lanes[exist_lane.index(lane_id)],
+                        initial_width=width,
+                        initial_height=height
+                    )
 
-                return polylines, labels
-            else:
-                empty_label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
-                polylines_empty_shape = self.max_lines_per_frame * self.max_num_points * 2
-                return np.zeros(shape=polylines_empty_shape), np.array(
-                    [empty_label for x in range(self.max_lines_per_frame)]).flatten()
+                if lane_id % 2 == 0:
+                    polylines = np.append(polylines, points)
+                    labels = np.append(labels, label)
+                else:
+                    polylines = np.insert(polylines, 0, points)
+                    labels = np.insert(labels, 0, label)
+
+            return polylines, labels
+        else:
+            empty_label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
+            polylines_empty_shape = self.max_lines_per_frame * self.max_num_points * 2
+            return np.zeros(shape=polylines_empty_shape), np.array(
+                [empty_label for x in range(self.max_lines_per_frame)]).flatten()
 
     def exec(self) -> None:
         """Convert and save json files to new hdf5 files"""

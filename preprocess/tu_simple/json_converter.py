@@ -9,11 +9,12 @@ import logging
 import cv2
 from utils import TuSimpleJson, TuSimpleHdf5
 from pathlib import Path
+from lane_line_recognition.base import AbstractConverter
 
 log = logging.getLogger(__name__)
 
 
-class TuSimpleJsonConverter:
+class TuSimpleJsonConverter(AbstractConverter):
     # TODO @Karim: check frame's resolution. Is it `1280×720`?
     # TODO @Karim: investigate and decide to add labels
     def __init__(self,
@@ -44,7 +45,7 @@ class TuSimpleJsonConverter:
             raise ValueError('Shape of frame and expected is not equal! '
                              f'Real shape:{width}x{height}')
 
-    def get_polylines_from_json_line(self, line: str) ->Tuple[np.ndarray, str]:
+    def get_polylines_from_json_line(self, line: str) -> Tuple[np.ndarray, str]:
         json_line = json.loads(line)
         frame_path = json_line.pop(TuSimpleJson.frame_path)
         frame_full_path = self.frame_dataset_path + frame_path
@@ -55,16 +56,18 @@ class TuSimpleJsonConverter:
         lanes = np.where(lanes == -2, -1, lanes)
         return lanes, frame_path
 
-    def exec(self):
-        with open(self.json_file, 'r') as f:
+    def get_data_from_file(self, json_path: str):
+        with open(json_path, 'r') as f:
             for json_frame_data_line in f.readlines():
-                polylines_width, frame_path = self.get_polylines_from_json_line(json_frame_data_line)
+                return self.get_polylines_from_json_line(json_frame_data_line)
 
-                Path(self.final_binary_json_path).mkdir(parents=True, exist_ok=True)
+    def exec(self):
+        polylines_width, frame_path = self.get_data_from_file(self.json_file)
+        Path(self.final_binary_json_path).mkdir(parents=True, exist_ok=True)
 
-                with h5py.File(f"{self.final_binary_json_path}/{frame_path}.hdf5", "w") as f:
-                    grp = f.create_group(TuSimpleHdf5.group_name)
-                    grp.create_dataset(TuSimpleHdf5.dataset_name, data=polylines_width, dtype='float32')
+        with h5py.File(f"{self.final_binary_json_path}/{frame_path}.hdf5", "w") as f:
+            grp = f.create_group(TuSimpleHdf5.group_name)
+            grp.create_dataset(TuSimpleHdf5.dataset_name, data=polylines_width, dtype='float32')
 
 
 if __name__ == '__main__':
