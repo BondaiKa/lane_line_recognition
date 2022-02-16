@@ -29,7 +29,6 @@ class JsonReviewer:
 
     def exec(self):
         for json_file_path in self.json_glob_path:
-            # TODO: check open format
             with open(json_file_path, 'r+') as f:
                 json_file = json.load(f)
                 image_path = json_file[Vil100Json.INFO][Vil100Json.IMAGE_PATH]

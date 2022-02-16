@@ -9,8 +9,7 @@ import random
 import h5py
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
-from lane_line_recognition.utils import test_generator
-from lane_line_recognition.preprocess.vil_100.utils import VIL100HDF5
+from lane_line_recognition.preprocess.vil_100.utils import VIL100HDF5, test_vil100_generator
 import logging
 from lane_line_recognition.base import AbstractFrameGenerator, AbstractFrameGeneratorCreator
 
@@ -153,4 +152,4 @@ if __name__ == "__main__":
         target_shape=input_shape,
     )
 
-    test_generator(train_generator, draw_line=True)
+    test_vil100_generator(train_generator, draw_line=True)
