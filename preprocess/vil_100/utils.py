@@ -39,15 +39,15 @@ class LineType:
     NO_LINE = 0
     SINGLE_WHITE_SOLID = 1
     SINGLE_WHITE_DOTTED = 2
-    DOUBLE_WHITE_SOLID = 3
+    OTHER_LINE = 3
 
-    ALL_LINES = {NO_LINE, SINGLE_WHITE_SOLID, SINGLE_WHITE_DOTTED, DOUBLE_WHITE_SOLID}
+    ALL_LINES = {NO_LINE, SINGLE_WHITE_SOLID, SINGLE_WHITE_DOTTED, OTHER_LINE}
 
 
 VIL_100_colour_line = {
-    LineType.SINGLE_WHITE_SOLID: (255, 0, 0),  # single white solid
-    LineType.SINGLE_WHITE_DOTTED: (0, 255, 0),  # single white dotted
-    LineType.DOUBLE_WHITE_SOLID: (255, 125, 0),  # single yellow solid
+    LineType.SINGLE_WHITE_SOLID: (255, 0, 0),
+    LineType.SINGLE_WHITE_DOTTED: (0, 255, 0),
+    LineType.OTHER_LINE: (0, 0, 255),
     # 4: (255, 255, 0),  # single yellow dotted
     # 5: (255, 0, 0),  # double white solid
     # 6: (255, 125, 0),  # double yellow solid
@@ -85,7 +85,8 @@ def get_valid_attribute(attr: int) -> int:
 
 def get_colour_from_one_hot_vector(vector: np.ndarray) -> Tuple[int, int, int]:
     """Get colour from one hot vector"""
-    return VIL_100_colour_line.get(int(np.argmax(vector, axis=1)), None)
+    # todo inital was axis=1
+    return VIL_100_colour_line.get(int(np.argmax(vector, axis=0)), VIL_100_colour_line[LineType.OTHER_LINE])
 
 
 def test_vil100_generator(generator, draw_line=False) -> None:

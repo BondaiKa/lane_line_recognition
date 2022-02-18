@@ -15,7 +15,9 @@ if __name__ == "__main__":
 
     load_dotenv()
     CAMERA_PATH = os.getenv('CAMERA_PATH')
-    NEURAL_NETWORK_MODEL_PATH = os.getenv('NEURAL_NETWORK_MODEL_PATH')
+    POLYLINE_NEURAL_NETWORK_MODEL_PATH = os.getenv('POLYLINE_NEURAL_NETWORK_MODEL_PATH')
+    LABEL_NEURAL_NETWORK_MODEL_PATH = os.getenv('LABEL_NEURAL_NETWORK_MODEL_PATH')
+
     CAMERA_WIDTH = int(os.getenv('CAMERA_WIDTH'))
     CAMERA_HEIGHT = int(os.getenv('CAMERA_HEIGHT'))
     MAX_LINES_PER_FRAME = int(os.getenv('MAX_LINES_PER_FRAME'))
@@ -25,10 +27,10 @@ if __name__ == "__main__":
     NEURAL_NETWORK_HEIGHT = int(os.getenv('NEURAL_NETWORK_HEIGHT'))
     RESCALE_POLYLINE_COEFFICIENT = float(os.getenv('RESCALE_POLYLINE_COEFFICIENT'))
 
-
     camera = FakeVideoHandler(camera_path=CAMERA_PATH)
     frame_handler = FrameHandler(
-        model_path=NEURAL_NETWORK_MODEL_PATH,
+        polyline_model_path=POLYLINE_NEURAL_NETWORK_MODEL_PATH,
+        label_model_path=LABEL_NEURAL_NETWORK_MODEL_PATH,
         width=CAMERA_WIDTH,
         height=CAMERA_HEIGHT,
         max_lines_per_frame=MAX_LINES_PER_FRAME,
@@ -43,3 +45,4 @@ if __name__ == "__main__":
     camera.release()
 
     log.info("End working...")
+    print('End working...')
