@@ -1,10 +1,11 @@
-from .base import MetaSingleton
+from base import MetaSingleton
 from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector
 from typing import Tuple, List
 import numpy as np
 import cv2
 import tensorflow as tf
-
+from dotenv import load_dotenv
+import os
 import logging
 
 log = logging.getLogger(__name__)
@@ -129,3 +130,43 @@ class FrameHandler(metaclass=MetaSingleton):
         for points, color in zip(list_of_points, list_of_colors):
             frame = cv2.polylines(frame, np.int32(points).reshape((-1, 1, 2)), 1, color, thickness=5)
         return frame
+
+
+if __name__ == '__main__':
+    log.info("Start working...")
+    load_dotenv()
+
+    FRAME_PATH = os.getenv('FRAME_PATH')
+    POLYLINE_NEURAL_NETWORK_MODEL_PATH = os.getenv('POLYLINE_NEURAL_NETWORK_MODEL_PATH')
+    LABEL_NEURAL_NETWORK_MODEL_PATH = os.getenv('LABEL_NEURAL_NETWORK_MODEL_PATH')
+    CAMERA_WIDTH = int(os.getenv('CAMERA_WIDTH'))
+    CAMERA_HEIGHT = int(os.getenv('CAMERA_HEIGHT'))
+    MAX_LINES_PER_FRAME = int(os.getenv('MAX_LINES_PER_FRAME'))
+    MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
+    NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
+    NEURAL_NETWORK_WIDTH = int(os.getenv('NEURAL_NETWORK_WIDTH'))
+    NEURAL_NETWORK_HEIGHT = int(os.getenv('NEURAL_NETWORK_HEIGHT'))
+    RESCALE_POLYLINE_COEFFICIENT = float(os.getenv('RESCALE_POLYLINE_COEFFICIENT'))
+
+    frame_handler = FrameHandler(
+        polyline_model_path=POLYLINE_NEURAL_NETWORK_MODEL_PATH,
+        label_model_path=LABEL_NEURAL_NETWORK_MODEL_PATH,
+        width=CAMERA_WIDTH,
+        height=CAMERA_HEIGHT,
+        max_lines_per_frame=MAX_LINES_PER_FRAME,
+        max_num_points=MAX_NUM_POINTS,
+        num_type_of_lines=NUM_TYPE_OF_LINES,
+        neural_net_width=NEURAL_NETWORK_WIDTH,
+        neural_net_height=NEURAL_NETWORK_WIDTH,
+        rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
+    )
+
+    frame = cv2.imread(FRAME_PATH)
+    cv2.imshow(f'Original frame', frame)
+    frame = frame_handler.preprocess_frame(frame)
+    polylines, labels = frame_handler.recognize(frame)
+    polylines, colors = frame_handler.postprocess_frame(polylines=polylines,
+                                                        labels=labels)
+    result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
+    cv2.imshow(f'Final frame', result)
+    cv2.waitKey(1)
