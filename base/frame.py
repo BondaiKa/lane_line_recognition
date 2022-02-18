@@ -80,8 +80,8 @@ class FrameHandler(metaclass=MetaSingleton):
 
         return (polyline_widths, polyline_height), labels
 
-    def postprocess_frame(self, polylines: Tuple[np.ndarray, np.ndarray], labels: List[np.ndarray]) -> Tuple[
-        List[np.ndarray]]:
+    def postprocess_frame(self, polylines: Tuple[np.ndarray, np.ndarray], labels: List[np.ndarray]) \
+            -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get Separated polylines and labels values (number of line)-n numpy arrays respectively
 
@@ -165,8 +165,7 @@ if __name__ == '__main__':
     cv2.imshow(f'Original frame', frame)
     frame = frame_handler.preprocess_frame(frame)
     polylines, labels = frame_handler.recognize(frame)
-    polylines, colors = frame_handler.postprocess_frame(polylines=polylines,
-                                                        labels=labels)
+    polylines, colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels)
     result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
     cv2.imshow(f'Final frame', result)
     cv2.waitKey(1)
