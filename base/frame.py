@@ -1,4 +1,4 @@
-from base import MetaSingleton
+from .base import MetaSingleton
 from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector
 from typing import Tuple, List
 import numpy as np
@@ -53,16 +53,16 @@ class FrameHandler(metaclass=MetaSingleton):
         # TODO @Karim: apply filter
         ###
         width, height = self.width, self.height
-
+        _frame = np.copy(frame)
         log.debug(f"Resizing frame to {self.neural_net_width}x{self.neural_net_height} resolution...")
-        frame = cv2.resize(frame, dsize=(self.neural_net_width, self.neural_net_height), interpolation=cv2.INTER_AREA)
-        frame = frame / 255
+        _frame = cv2.resize(_frame, dsize=(self.neural_net_width, self.neural_net_height), interpolation=cv2.INTER_AREA)
+        _frame = _frame / 255
         # TODO @Karim use transform later
         # presp_frame = transform_frame(frame, width, height)
         # cv2.imshow('Perspective_transform_frame', presp_frame)
 
         # return transform_frame(frame, width, height, reverse_flag=True)
-        return frame
+        return _frame
 
     def recognize(self, frame: np.ndarray) -> Tuple[Tuple[np.ndarray, np.ndarray], np.ndarray]:
         frame = tf.image.rgb_to_grayscale(frame).numpy()
@@ -116,11 +116,15 @@ class FrameHandler(metaclass=MetaSingleton):
         return list(map(lambda polyline: self.filter_coordination_for_resolution(polyline),
                         list_of_polylines))
 
+    def rescale_polylines(self, polylines: List[np.ndarray]) -> List[np.ndarray]:
+        # TODO: @Karim rescale polylines to initial resolution
+        return polylines
+
     @classmethod
     def draw_popylines(cls, frame: np.ndarray, list_of_points: List[np.ndarray],
                        list_of_colors: List[np.ndarray]) -> np.ndarray:
         """
-        draw polylines and labels to a frame
+        draw polygonal chains and labels to a frame
         :param list_of_colors: list of color for each polyline
         :param frame: input frame
         :param list_of_points: list of polylines
@@ -161,11 +165,15 @@ if __name__ == '__main__':
         rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
     )
 
-    frame = cv2.imread(FRAME_PATH)
-    cv2.imshow(f'Original frame', frame)
-    frame = frame_handler.preprocess_frame(frame)
+    initial_frame = cv2.imread(FRAME_PATH)
+    cv2.imshow(f'Original frame', initial_frame)
+    frame = frame_handler.preprocess_frame(initial_frame)
     polylines, labels = frame_handler.recognize(frame)
     polylines, colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels)
     result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
+
+    rescaled_polylines = frame_handler.rescale_polylines(polylines)
+    labeled_intial_frame = frame_handler.draw_popylines(frame=initial_frame, list_of_points=rescaled_polylines,
+                                                        list_of_colors=colors)
     cv2.imshow(f'Final frame', result)
     cv2.waitKey(1)

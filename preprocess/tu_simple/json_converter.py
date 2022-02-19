@@ -35,6 +35,7 @@ class TuSimpleJsonConverter(AbstractConverter):
         self.final_binary_json_path = final_binary_json_path
 
     def _verify_frame_shape(self, frame_path: np.ndarray) -> Tuple[int, int]:
+        """Check that each frame has same expected shape"""
         frame = cv2.imread(frame_path)
         height, width = frame.shape[0], frame.shape[1]
         if self.TU_SIMPLE_EXPECTED_SHAPE[0] != width or \
@@ -45,12 +46,11 @@ class TuSimpleJsonConverter(AbstractConverter):
                              f'Real shape:{width}x{height}')
         return width, height
 
-    def scale_polylines(self, original_width: int, original_height: int,
-                        polyline_widths: np.ndarray, polyline_heights: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        # TODO @Karim: check adding -1 at the start of each array!!!
+    def __scale_widths(self, original_width: int, polyline_widths: np.ndarray):
+        """Scale widths data"""
         polyline_widths = np.where(
             polyline_widths > 0,
-            polyline_widths / original_width * self.final_shape_to_convert[0] * self.rescale_polyline_coef,
+            polyline_widths / original_width,
             polyline_widths
         )
         polyline_widths = np.where(polyline_widths == -2, -1, polyline_widths)
@@ -62,22 +62,38 @@ class TuSimpleJsonConverter(AbstractConverter):
             mode='constant',
             constant_values=(-1,)
         )
-        empty_polylines = np.full(shape=(self.max_lines_per_frame - polyline_widths.shape[0], self.max_num_points),
+        empty_polylines = np.full(shape=((self.max_lines_per_frame - polyline_widths.shape[0]) * self.max_num_points),
                                   fill_value=-1)
-        polyline_widths = np.vstack([polyline_widths, empty_polylines])
+        return np.hstack([polyline_widths.flatten(), empty_polylines])
 
+    def __scale_heights(self, original_height: int, polyline_heights: np.ndarray):
+        """Scale heights data"""
         polyline_heights = np.where(
             polyline_heights > 0,
-            polyline_heights / original_height * self.final_shape_to_convert[1] * self.rescale_polyline_coef,
+            polyline_heights / original_height,
             polyline_heights
         )
         polyline_heights = np.pad(polyline_heights, pad_width=(self.max_num_points - polyline_heights.shape[0], 0),
                                   mode='constant',
                                   constant_values=(-1,))
+        return np.tile(polyline_heights, self.max_lines_per_frame)
 
-        return polyline_widths.flatten(), polyline_heights
+    def scale_polylines(self, original_width: int, original_height: int,
+                        polyline_widths: np.ndarray, polyline_heights: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Scale polygonal chains: divide and standardize dataset for NN input
+        :param original_width: initial frame width
+        :param original_height:initial frame height
+        :param polyline_widths: polygonal widths
+        :param polyline_heights: polygonal heights
+        :return: scaled and prepared polygonal widths and heights
+        """
+        # TODO @Karim: check adding -1 at the start of each array!!!
+        polyline_widths = self.__scale_widths(original_width=original_width, polyline_widths=polyline_widths)
+        polyline_heights = self.__scale_heights(original_height=original_height, polyline_heights=polyline_heights)
+        return polyline_widths, polyline_heights
 
     def get_polylines_from_json_line(self, line: str) -> Tuple[str, np.ndarray, np.ndarray]:
+        """Retrieve polygonal chains from json file"""
         json_line = json.loads(line)
         frame_path = json_line.pop(TuSimpleJson.frame_path)
         frame_full_path = self.frame_dataset_path + '/' + frame_path
@@ -91,6 +107,7 @@ class TuSimpleJsonConverter(AbstractConverter):
         return frame_path, lane_widths, lane_heights
 
     def get_data_from_file(self, json_path: str):
+        """Read json line by line"""
         # TODO @Karim: investigate and decide to add labels
         with open(json_path, 'r') as f:
             for json_frame_data_line in f.readlines():

@@ -79,9 +79,9 @@ class TuSimpleFrameGenerator(AbstractFrameGenerator, Sequence):
         polylines_width_output = np.empty(
             shape=(0, self.max_num_points * self.max_lines_per_frame))
         polylines_height_output = np.empty(
-            shape=(0, self.max_num_points))
+            shape=(0, self.max_num_points * self.max_lines_per_frame))
 
-        frame_output = np.empty(shape=(0, self.output_shape[0], self.output_shape[1],1))
+        frame_output = np.empty(shape=(0, self.output_shape[0], self.output_shape[1], 1))
 
         for _frame, _json in zip(batch_frames_path, batch_json_path):
             polylines_width, polylines_height = self.get_data_from_file(_json)
