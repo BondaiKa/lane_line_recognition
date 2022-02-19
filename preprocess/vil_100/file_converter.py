@@ -31,7 +31,6 @@ class VILJsonConverter(AbstractConverter):
                  json_glob_path: str,
                  final_shape: Tuple[int, int],
                  frame_dataset_path: str,
-                 rescale_polyline_coef: float,
                  ):
 
         self.max_lines_per_frame = max_lines_per_frame
@@ -41,11 +40,14 @@ class VILJsonConverter(AbstractConverter):
         self.files_count = len(self.json_files)
         self.frame_dataset_path = frame_dataset_path
         self.final_shape = final_shape
-        self.rescale_polyline_coef = rescale_polyline_coef
 
-    def __rescale_coordinates(self, row: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
-        return row[0] / initial_width * self.final_shape[0] * self.rescale_polyline_coef, \
-               row[1] / initial_height * self.final_shape[1] * self.rescale_polyline_coef
+        message = f"VILJsonConverter params:\n {locals()}"
+        log.debug(message)
+        print(message)
+
+    @staticmethod
+    def __rescale_coordinates(row: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
+        return row[0] / initial_width, row[1] / initial_height
 
     def __rescale_polylines(self, polylines: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
         """Rescale coordinates due to new frame resolution"""
@@ -58,7 +60,8 @@ class VILJsonConverter(AbstractConverter):
         np.ndarray, np.ndarray]:
         """Get array from points list"""
         points = np.array(
-            lane[Vil100Json.POINTS])
+            lane[Vil100Json.POINTS])  # todo: fix
+        # widths, height = np.split(points, 2, axis=1)
         points = self.__rescale_polylines(points, initial_width=initial_width, initial_height=initial_height).flatten()
         points = np.pad(points, pad_width=(0, self.max_num_points * 2 - points.shape[0]),
                         mode='constant', constant_values=(-1,))
@@ -88,9 +91,6 @@ class VILJsonConverter(AbstractConverter):
             frame_path=image_path
         )
 
-        width = json_file[Vil100Json.INFO][Vil100Json.WIDTH]
-        height = json_file[Vil100Json.INFO][Vil100Json.HEIGHT]
-
         lanes: Lane_type = json_file[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
         lanes = sorted(lanes, key=lambda lane: lane[Vil100Json.LANE_ID])
 
@@ -102,7 +102,7 @@ class VILJsonConverter(AbstractConverter):
 
             for lane_id in range(1, self.max_lines_per_frame + 1):
                 if lane_id in missed_lane:
-                    points = np.zeros(shape=(self.max_num_points * 2))
+                    points = np.zeros(shape=(self.max_num_points * 2))  # todo: fix
                     label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
                 else:
                     points, label = self.__get_polyline_with_label(
@@ -120,7 +120,7 @@ class VILJsonConverter(AbstractConverter):
 
             return polylines, labels
         else:
-            empty_label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)
+            empty_label = one_hot_list_encoder(LineType.NO_LINE, self.num_type_of_lines)  # todo: fix
             polylines_empty_shape = self.max_lines_per_frame * self.max_num_points * 2
             return np.zeros(shape=polylines_empty_shape), np.array(
                 [empty_label for x in range(self.max_lines_per_frame)]).flatten()
@@ -148,16 +148,14 @@ if __name__ == '__main__':
     dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
     load_dotenv(dotenv_path)
 
-    CAMERA_WIDTH = int(os.getenv('CAMERA_WIDTH'))
-    CAMERA_HEIGHT = int(os.getenv('CAMERA_HEIGHT'))
+    FINAL_WIDTH = int(os.getenv('FINAL_WIDTH'))
+    FINAL_HEIGHT = int(os.getenv('FINAL_HEIGHT'))
     MAX_LINES_PER_FRAME = int(os.getenv('MAX_LINES_PER_FRAME'))
     MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     JSON_DATASET_PATH = os.getenv('JSON_DATASET_PATH')
     FRAME_DATASET_PATH = os.getenv("FRAME_DATASET_PATH")
-    RESCALE_POLYLINE_COEFFICIENT = float(os.getenv("RESCALE_POLYLINE_COEFFICIENT"))
 
-    FINAL_SHAPE = (CAMERA_WIDTH, CAMERA_HEIGHT)
     JSON_GLOB_PATH = JSON_DATASET_PATH + '/*/*.json'
 
     converter = VILJsonConverter(
@@ -165,9 +163,8 @@ if __name__ == '__main__':
         max_num_points=MAX_NUM_POINTS,
         num_type_of_lines=NUM_TYPE_OF_LINES,
         json_glob_path=JSON_GLOB_PATH,
-        final_shape=FINAL_SHAPE,
+        final_shape=(FINAL_WIDTH, FINAL_HEIGHT),
         frame_dataset_path=FRAME_DATASET_PATH,
-        rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
     )
     converter.exec()
     log.info('Done...')

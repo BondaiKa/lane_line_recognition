@@ -22,7 +22,6 @@ class TuSimpleJsonConverter(AbstractConverter):
                  json_file_path: str,
                  final_shape_to_convert: Tuple[int, int],
                  frame_dataset_path: str,
-                 rescale_polyline_coef: float,
                  final_binary_json_path: str,
                  ):
         self.max_lines_per_frame = max_lines_per_frame
@@ -30,7 +29,6 @@ class TuSimpleJsonConverter(AbstractConverter):
         self.json_file = json_file_path
         self.frame_dataset_path = frame_dataset_path
         self.final_shape_to_convert = final_shape_to_convert
-        self.rescale_polyline_coef = rescale_polyline_coef
         self.TU_SIMPLE_EXPECTED_SHAPE = (1280, 720)
         self.final_binary_json_path = final_binary_json_path
 
@@ -46,7 +44,7 @@ class TuSimpleJsonConverter(AbstractConverter):
                              f'Real shape:{width}x{height}')
         return width, height
 
-    def __scale_widths(self, original_width: int, polyline_widths: np.ndarray):
+    def __transform_widths(self, original_width: int, polyline_widths: np.ndarray):
         """Scale widths data"""
         polyline_widths = np.where(
             polyline_widths > 0,
@@ -66,7 +64,7 @@ class TuSimpleJsonConverter(AbstractConverter):
                                   fill_value=-1)
         return np.hstack([polyline_widths.flatten(), empty_polylines])
 
-    def __scale_heights(self, original_height: int, polyline_heights: np.ndarray):
+    def __transform_heights(self, original_height: int, polyline_heights: np.ndarray):
         """Scale heights data"""
         polyline_heights = np.where(
             polyline_heights > 0,
@@ -78,8 +76,8 @@ class TuSimpleJsonConverter(AbstractConverter):
                                   constant_values=(-1,))
         return np.tile(polyline_heights, self.max_lines_per_frame)
 
-    def scale_polylines(self, original_width: int, original_height: int,
-                        polyline_widths: np.ndarray, polyline_heights: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def transform_polylines(self, original_width: int, original_height: int,
+                            polyline_widths: np.ndarray, polyline_heights: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Scale polygonal chains: divide and standardize dataset for NN input
         :param original_width: initial frame width
         :param original_height:initial frame height
@@ -88,8 +86,8 @@ class TuSimpleJsonConverter(AbstractConverter):
         :return: scaled and prepared polygonal widths and heights
         """
         # TODO @Karim: check adding -1 at the start of each array!!!
-        polyline_widths = self.__scale_widths(original_width=original_width, polyline_widths=polyline_widths)
-        polyline_heights = self.__scale_heights(original_height=original_height, polyline_heights=polyline_heights)
+        polyline_widths = self.__transform_widths(original_width=original_width, polyline_widths=polyline_widths)
+        polyline_heights = self.__transform_heights(original_height=original_height, polyline_heights=polyline_heights)
         return polyline_widths, polyline_heights
 
     def get_polylines_from_json_line(self, line: str) -> Tuple[str, np.ndarray, np.ndarray]:
@@ -98,7 +96,7 @@ class TuSimpleJsonConverter(AbstractConverter):
         frame_path = json_line.pop(TuSimpleJson.frame_path)
         frame_full_path = self.frame_dataset_path + '/' + frame_path
         width, height = self._verify_frame_shape(frame_full_path)
-        lane_widths, lane_heights = self.scale_polylines(
+        lane_widths, lane_heights = self.transform_polylines(
             original_width=width,
             original_height=height,
             polyline_widths=np.array(json_line[TuSimpleJson.lane_widths]),
@@ -136,7 +134,6 @@ if __name__ == '__main__':
     MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
     TU_SIMPLE_JSON_HDF5_DATASET_PATH = os.getenv('TU_SIMPLE_JSON_HDF5_DATASET_PATH')
     TU_SIMPLE_FRAME_DATASET_PATH = os.getenv('TU_SIMPLE_FRAME_DATASET_PATH')
-    RESCALE_POLYLINE_COEFFICIENT = float(os.getenv('RESCALE_POLYLINE_COEFFICIENT'))
 
     tu_simple_converter = TuSimpleJsonConverter(
         max_lines_per_frame=MAX_LINES_PER_FRAME,
@@ -145,7 +142,6 @@ if __name__ == '__main__':
         final_shape_to_convert=(FINAL_WIDTH, FINAL_HEIGHT),
         frame_dataset_path=TU_SIMPLE_FRAME_DATASET_PATH,
         final_binary_json_path=TU_SIMPLE_JSON_HDF5_DATASET_PATH,
-        rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
     )
     tu_simple_converter.exec()
     log.info('Done...')
