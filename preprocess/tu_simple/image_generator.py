@@ -23,7 +23,7 @@ class TuSimpleFrameGenerator(AbstractFrameGenerator, Sequence):
                  max_lines_per_frame: int,
                  max_num_points: int,
                  batch_size: int,
-                 output_shape: Tuple[int, int],
+                 final_shape: Tuple[int, int],
                  shuffle: bool,
                  files: List[str],
                  json_files: List[str],
@@ -31,7 +31,7 @@ class TuSimpleFrameGenerator(AbstractFrameGenerator, Sequence):
                  color_mode: str = 'grayscale',
                  ):
         self.batch_size = batch_size
-        self.output_shape = output_shape
+        self.final_shape = final_shape
         self.rescale = rescale
         self.color_mode = color_mode
         self.max_lines_per_frame = max_lines_per_frame
@@ -54,16 +54,6 @@ class TuSimpleFrameGenerator(AbstractFrameGenerator, Sequence):
         group = file.get(TuSimpleHdf5.group_name)
         return group.get(TuSimpleHdf5.dataset_polylines_width), group.get(TuSimpleHdf5.dataset_polylines_height)
 
-    def get_frame_from_file(self, frame_path: str):
-        frame = tf.keras.utils.load_img(frame_path,
-                                        color_mode=self.color_mode,
-                                        target_size=(self.output_shape[1], self.output_shape[0])
-                                        )
-        frame = tf.keras.preprocessing.image.img_to_array(frame)
-        frame = frame * self.rescale
-        frame = np.expand_dims(frame, 0)
-        return frame
-
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
@@ -81,7 +71,7 @@ class TuSimpleFrameGenerator(AbstractFrameGenerator, Sequence):
         polylines_height_output = np.empty(
             shape=(0, self.max_num_points * self.max_lines_per_frame))
 
-        frame_output = np.empty(shape=(0, self.output_shape[0], self.output_shape[1], 1))
+        frame_output = np.empty(shape=(0, self.final_shape[0], self.final_shape[1], 1))
 
         for _frame, _json in zip(batch_frames_path, batch_json_path):
             polylines_width, polylines_height = self.get_data_from_file(_json)
@@ -130,7 +120,7 @@ if __name__ == "__main__":
     tu_simple_train_generator = tu_simple_image_generator.flow_from_directory(
         subset='training', shuffle=True, batch_size=BATCH_SIZE,
         number_files=AMOUNT_OF_FRAMES,
-        output_shape=FINAL_SHAPE,
+        final_shape=FINAL_SHAPE,
         max_lines_per_frame=MAX_LINES_PER_FRAME,
         max_num_points=MAX_NUM_POINTS,
     )
@@ -138,7 +128,7 @@ if __name__ == "__main__":
     tu_simple_validation_generator = tu_simple_image_generator.flow_from_directory(
         subset='validation', shuffle=True, batch_size=BATCH_SIZE,
         number_files=AMOUNT_OF_FRAMES,
-        output_shape=FINAL_SHAPE,
+        final_shape=FINAL_SHAPE,
         max_lines_per_frame=MAX_LINES_PER_FRAME,
         max_num_points=MAX_NUM_POINTS,
     )

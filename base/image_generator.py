@@ -2,6 +2,8 @@ from abc import ABCMeta, abstractmethod
 from typing import Tuple, List, Callable, Type
 import glob
 import logging
+import tensorflow as tf
+import numpy as np
 
 log = logging.getLogger(__name__)
 
@@ -11,9 +13,15 @@ class AbstractFrameGenerator(metaclass=ABCMeta):
     def get_data_from_file(self, *args, **kwargs):
         raise NotImplementedError
 
-    @abstractmethod
-    def get_frame_from_file(self, frame_path: str):
-        raise NotImplementedError
+    def get_frame_from_file(self, frame_path: str) -> np.ndarray:
+        frame = tf.keras.utils.load_img(frame_path,
+                                        color_mode=self.color_mode,
+                                        target_size=(self.final_shape[1], self.final_shape[0])
+                                        )
+        frame = tf.keras.preprocessing.image.img_to_array(frame)
+        frame = frame * self.rescale
+        frame = np.expand_dims(frame, 0)
+        return frame
 
 
 class AbstractFrameGeneratorCreator(metaclass=ABCMeta):
