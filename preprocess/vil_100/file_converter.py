@@ -66,7 +66,7 @@ class VIL100JsonConverter(AbstractConverter):
             lane[Vil100Json.POINTS])  # todo: fix
         # widths, height = np.split(points, 2, axis=1)
         points = self.__rescale_polylines(points, initial_width=initial_width, initial_height=initial_height).flatten()
-        points = np.pad(points, pad_width=(self.max_num_points * 2 - points.shape[0],0),
+        points = np.pad(points, pad_width=(self.max_num_points * 2 - points.shape[0], 0),
                         mode='constant', constant_values=(-1,))
         points = tuple(np.split(points.reshape(-1, 2), 2, axis=1))
         polyline_widths, polyline_heights = points[0].flatten(), points[1].flatten()
@@ -106,14 +106,13 @@ class VIL100JsonConverter(AbstractConverter):
         lanes: Lane_type = json_file[Vil100Json.ANNOTATIONS][Vil100Json.LANE]
         lanes = sorted(lanes, key=lambda lane: lane[Vil100Json.LANE_ID])
 
-        polyline_widths_output, polyline_heights_output = np.empty(shape=(0, self.max_num_points)), np.empty(
-            shape=(0, self.max_num_points))
-        labels = np.empty(shape=(0, self.num_type_of_lines))
-        # TODO @Karim: check another params in json files like "occlusion"
+        polyline_widths_output = np.empty(shape=(0, self.max_num_points)),
+        polyline_heights_output = np.empty(shape=(0, self.max_num_points))
+        labels_output = np.empty(shape=(0, self.num_type_of_lines))
+
         exist_lane = [x[Vil100Json.LANE_ID] for x in lanes]
         missed_lane = LANE_ID_FULL_LIST - set(exist_lane)
 
-        #TODO: fix logic
         for lane_id in range(1, self.max_lines_per_frame + 1):
             if lane_id in missed_lane:
                 points: Tuple[polyline_width_type, polyline_height_type] = (
@@ -128,17 +127,11 @@ class VIL100JsonConverter(AbstractConverter):
                     initial_height=height
                 )
             polyline_widths, polyline_heights = points[0], points[1]
+            polyline_widths_output = np.append(polyline_widths_output, polyline_widths)
+            polyline_heights_output = np.append(polyline_heights_output, polyline_heights)
+            labels_output = np.append(labels_output, label)
 
-            if lane_id % 2 == 0:
-                polyline_widths_output = np.append(polyline_widths_output, polyline_widths)
-                polyline_heights_output = np.append(polyline_heights_output, polyline_heights)
-                labels = np.append(labels, label)
-            else:
-                polyline_widths_output = np.insert(polyline_widths_output, 0, polyline_widths)
-                polyline_heights_output = np.insert(polyline_heights_output, 0, polyline_heights)
-                labels = np.insert(labels, 0, label)
-
-        return (polyline_widths_output, polyline_heights_output), labels
+        return (polyline_widths_output, polyline_heights_output), labels_output
 
     def exec(self) -> None:
         """Convert and save json files to new hdf5 files"""
@@ -157,6 +150,7 @@ class VIL100JsonConverter(AbstractConverter):
                 grp.create_dataset(VIL100HDF5.POLYLINE_WIDTHS_DATASET_NAME, data=polyline_widths, dtype='float32')
                 grp.create_dataset(VIL100HDF5.POLYLINE_HEIGHTS_DATASET_NAME, data=polyline_heights, dtype='float32')
                 grp.create_dataset(VIL100HDF5.LABELS_DATASET_NAME, data=labels, dtype='float32')
+
 
 if __name__ == '__main__':
     ENV_FILE_NAME = 'vil_100.env'
