@@ -88,7 +88,7 @@ class VIL100FrameGenerator(AbstractFrameGenerator, Sequence):
         polyline_width_output = np.empty(shape=(0, self.max_lines_per_frame * self.max_num_points))
         polyline_height_output = np.empty(shape=(0, self.max_lines_per_frame * self.max_num_points))
         labels_output = np.empty(shape=(0, self.num_type_of_lines * self.max_lines_per_frame))
-        frame_list = self.get_frame_from_file(batch_frames_path[0])
+        frame_output = np.empty(shape=(0, self.final_shape[0], self.final_shape[1], 1))
 
         for _frame, _json in zip(batch_frames_path, batch_json_path):
             polylines, labels = self.get_data_from_file(_json)
@@ -98,9 +98,9 @@ class VIL100FrameGenerator(AbstractFrameGenerator, Sequence):
             polyline_height_output = np.vstack((polyline_height_output, polyline_heights))
             labels_output = np.vstack((labels_output, labels))
             frame = self.get_frame_from_file(_frame)
-            frame_list = np.vstack((frame_list, frame))
+            frame_output = np.vstack((frame_output, frame))
 
-        return frame_list, (polyline_width_output, polyline_height_output)
+        return frame_output, (polyline_width_output, polyline_height_output)
 
 
 class VIL100FrameGeneratorCreator(AbstractFrameGeneratorCreator):

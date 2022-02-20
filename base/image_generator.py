@@ -55,6 +55,9 @@ class AbstractFrameGeneratorCreator(metaclass=ABCMeta):
         :param number_files: restrict max number of files from dataset
         :return: list of sorted and sliced files and json files
         """
+        message = f'Generator params: {locals()}'
+        log.debug(message)
+        print(message)
 
         files = sorted(glob.glob(self.__frame_glob_path))
         log.info(f"Number of files in dataset: {len(files)}. Using in training/validation: {number_files}")

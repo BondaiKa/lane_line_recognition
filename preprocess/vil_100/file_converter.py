@@ -26,7 +26,7 @@ polyline_height_type = np.ndarray
 labels_type = np.ndarray
 
 
-class VILJsonConverter(AbstractConverter):
+class VIL100JsonConverter(AbstractConverter):
     def __init__(self,
                  max_lines_per_frame: int,
                  max_num_points: int,
@@ -66,7 +66,7 @@ class VILJsonConverter(AbstractConverter):
             lane[Vil100Json.POINTS])  # todo: fix
         # widths, height = np.split(points, 2, axis=1)
         points = self.__rescale_polylines(points, initial_width=initial_width, initial_height=initial_height).flatten()
-        points = np.pad(points, pad_width=(0, self.max_num_points * 2 - points.shape[0]),
+        points = np.pad(points, pad_width=(self.max_num_points * 2 - points.shape[0],0),
                         mode='constant', constant_values=(-1,))
         points = tuple(np.split(points.reshape(-1, 2), 2, axis=1))
         polyline_widths, polyline_heights = points[0].flatten(), points[1].flatten()
@@ -113,6 +113,7 @@ class VILJsonConverter(AbstractConverter):
         exist_lane = [x[Vil100Json.LANE_ID] for x in lanes]
         missed_lane = LANE_ID_FULL_LIST - set(exist_lane)
 
+        #TODO: fix logic
         for lane_id in range(1, self.max_lines_per_frame + 1):
             if lane_id in missed_lane:
                 points: Tuple[polyline_width_type, polyline_height_type] = (
@@ -157,7 +158,6 @@ class VILJsonConverter(AbstractConverter):
                 grp.create_dataset(VIL100HDF5.POLYLINE_HEIGHTS_DATASET_NAME, data=polyline_heights, dtype='float32')
                 grp.create_dataset(VIL100HDF5.LABELS_DATASET_NAME, data=labels, dtype='float32')
 
-
 if __name__ == '__main__':
     ENV_FILE_NAME = 'vil_100.env'
     dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
     JSON_GLOB_PATH = JSON_DATASET_PATH + '/*/*.json'
 
-    converter = VILJsonConverter(
+    converter = VIL100JsonConverter(
         max_lines_per_frame=MAX_LINES_PER_FRAME,
         max_num_points=MAX_NUM_POINTS,
         num_type_of_lines=NUM_TYPE_OF_LINES,
