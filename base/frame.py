@@ -1,4 +1,4 @@
-from .base import MetaSingleton
+from lane_line_recognition.base import MetaSingleton
 from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector
 from typing import Tuple, List
 import numpy as np
@@ -132,7 +132,7 @@ class FrameHandler(metaclass=MetaSingleton):
         :return:
         """
         for points, color in zip(list_of_points, list_of_colors):
-            frame = cv2.polylines(frame, np.int32(points).reshape((-1, 1, 2)), 1, color, thickness=5)
+            frame = cv2.polylines(frame, np.int32(points).reshape((-1, 1, 2)), 1, color, thickness=3)
         return frame
 
 

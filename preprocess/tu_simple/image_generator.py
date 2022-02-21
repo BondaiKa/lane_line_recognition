@@ -11,7 +11,6 @@ import random
 import math
 import h5py
 import numpy as np
-import tensorflow as tf
 
 Frame_ouput_type = np.ndarray
 Polylines_width_ouput_type = Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,]
@@ -57,9 +56,8 @@ class TuSimpleFrameGenerator(AbstractFrameGenerator, Sequence):
     def __len__(self):
         return math.ceil(self.files_count / self.batch_size)
 
-    def __getitem__(self, idx: int) -> Tuple[Frame_ouput_type,
-                                             Polylines_width_ouput_type,
-                                             Polylines_height_ouput_type]:
+    def __getitem__(self, idx: int) -> Tuple[Frame_ouput_type, Tuple[Polylines_width_ouput_type,
+                                                                     Polylines_height_ouput_type]]:
 
         batch_frames_path = self.files[idx * self.batch_size:
                                        (idx + 1) * self.batch_size]
