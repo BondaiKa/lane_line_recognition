@@ -23,6 +23,7 @@ class TuSimpleJsonConverter(AbstractConverter):
                  final_shape_to_convert: Tuple[int, int],
                  frame_dataset_path: str,
                  final_binary_json_path: str,
+                 slice_coefficient: int,
                  ):
         self.max_lines_per_frame = max_lines_per_frame
         self.max_num_points = max_num_points
@@ -31,13 +32,14 @@ class TuSimpleJsonConverter(AbstractConverter):
         self.final_shape_to_convert = final_shape_to_convert
         self.TU_SIMPLE_EXPECTED_SHAPE = (1280, 720)
         self.final_binary_json_path = final_binary_json_path
+        self.slice_coefficient = slice_coefficient
 
         log.debug(f'TuSimpleJsonConverter params: {locals()}')
 
     def _verify_frame_shape(self, frame_path: np.ndarray) -> Tuple[int, int]:
         """Check that each frame has same expected shape"""
         frame = cv2.imread(frame_path)
-        if not frame:
+        if frame is None:
             log.warning(f'Frame not found. Frame path: {frame_path}.')
             raise FileNotFoundError
 
@@ -62,15 +64,16 @@ class TuSimpleJsonConverter(AbstractConverter):
             func1d=np.pad,
             axis=1,
             arr=polyline_widths,
-            pad_width=(0, self.max_num_points - polyline_widths.shape[1]),
+            pad_width=(0, self.max_num_points * self.slice_coefficient - polyline_widths.shape[1]),
             mode='constant',
             constant_values=(-1,)
         )
 
-        #TODO @Karim: refactor if condition
+        # TODO @Karim: refactor if condition
         if self.max_lines_per_frame - polyline_widths.shape[0]:
             polyline_widths = polyline_widths[:self.max_lines_per_frame]
 
+        polyline_widths = polyline_widths[:, ::self.slice_coefficient]
         empty_polylines = np.full(shape=((self.max_lines_per_frame - polyline_widths.shape[0]) * self.max_num_points),
                                   fill_value=-1)
         return np.hstack([polyline_widths.flatten(), empty_polylines])
@@ -82,9 +85,14 @@ class TuSimpleJsonConverter(AbstractConverter):
             polyline_heights / original_height,
             polyline_heights
         )
-        polyline_heights = np.pad(polyline_heights, pad_width=(0, self.max_num_points - polyline_heights.shape[0]),
-                                  mode='constant',
-                                  constant_values=(-1,))
+        polyline_heights = np.pad(
+            polyline_heights,
+            pad_width=(
+                0, self.max_num_points * self.slice_coefficient - polyline_heights.shape[0]),
+            mode='constant',
+            constant_values=(-1,)
+        )
+        polyline_heights = polyline_heights[::self.slice_coefficient]
         return np.tile(polyline_heights, self.max_lines_per_frame)
 
     def transform_polylines(self, original_width: int, original_height: int,
@@ -147,6 +155,7 @@ if __name__ == '__main__':
     MAX_NUM_POINTS = int(os.getenv('MAX_NUM_POINTS'))
     TU_SIMPLE_JSON_HDF5_DATASET_PATH = os.getenv('TU_SIMPLE_JSON_HDF5_DATASET_PATH')
     TU_SIMPLE_FRAME_DATASET_PATH = os.getenv('TU_SIMPLE_FRAME_DATASET_PATH')
+    SLICE_COEFFICIENT = int(os.getenv('SLICE_COEFFICIENT'))
 
     tu_simple_converter = TuSimpleJsonConverter(
         max_lines_per_frame=MAX_LINES_PER_FRAME,
@@ -155,6 +164,7 @@ if __name__ == '__main__':
         final_shape_to_convert=(FINAL_WIDTH, FINAL_HEIGHT),
         frame_dataset_path=TU_SIMPLE_FRAME_DATASET_PATH,
         final_binary_json_path=TU_SIMPLE_JSON_HDF5_DATASET_PATH,
+        slice_coefficient=SLICE_COEFFICIENT,
     )
     tu_simple_converter.exec()
     log.info('Done...')

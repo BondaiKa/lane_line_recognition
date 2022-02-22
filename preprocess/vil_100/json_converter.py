@@ -34,6 +34,7 @@ class VIL100JsonConverter(AbstractConverter):
                  json_glob_path: str,
                  final_shape: Tuple[int, int],
                  frame_dataset_path: str,
+                 slice_coefficient: int,
                  ):
 
         self.max_lines_per_frame = max_lines_per_frame
@@ -43,6 +44,7 @@ class VIL100JsonConverter(AbstractConverter):
         self.files_count = len(self.json_files)
         self.frame_dataset_path = frame_dataset_path
         self.final_shape = final_shape
+        self.slice_coefficient = slice_coefficient
 
         log.debug(f'VIL100JsonConverter params:\n{locals()}')
 
@@ -64,10 +66,14 @@ class VIL100JsonConverter(AbstractConverter):
             lane[Vil100Json.POINTS])  # todo: fix
         # widths, height = np.split(points, 2, axis=1)
         points = self.__rescale_polylines(points, initial_width=initial_width, initial_height=initial_height).flatten()
-        points = np.pad(points, pad_width=(0,self.max_num_points * 2 - points.shape[0]),
+        points = np.pad(points, pad_width=(0, self.max_num_points * self.slice_coefficient * 2 - points.shape[0]),
                         mode='constant', constant_values=(-1,))
         points = tuple(np.split(points.reshape(-1, 2), 2, axis=1))
         polyline_widths, polyline_heights = points[0].flatten(), points[1].flatten()
+
+        polyline_widths = polyline_widths[0::self.slice_coefficient]
+        polyline_heights = polyline_heights[0::self.slice_coefficient]
+
         # TODO @Karim: remember below `label.get(label)` is index 1,2,3,4
         label = get_valid_attribute(lane.get(Vil100Json.ATTRIBUTE, LineType.NO_LINE))
         labels = one_hot_list_encoder(label, self.num_type_of_lines)
@@ -164,6 +170,7 @@ if __name__ == '__main__':
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     JSON_DATASET_PATH = os.getenv('JSON_DATASET_PATH')
     FRAME_DATASET_PATH = os.getenv("FRAME_DATASET_PATH")
+    SLICE_COEFFICIENT = int(os.getenv('SLICE_COEFFICIENT'))
 
     JSON_GLOB_PATH = JSON_DATASET_PATH + '/*/*.json'
 
@@ -174,6 +181,7 @@ if __name__ == '__main__':
         json_glob_path=JSON_GLOB_PATH,
         final_shape=(FINAL_WIDTH, FINAL_HEIGHT),
         frame_dataset_path=FRAME_DATASET_PATH,
+        slice_coefficient=SLICE_COEFFICIENT,
     )
     converter.exec()
     log.info('Done...')
