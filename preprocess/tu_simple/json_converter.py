@@ -8,9 +8,9 @@ from typing import Tuple
 import logging
 import cv2
 from os.path import join, dirname
-from utils import TuSimpleJson, TuSimpleHdf5
+from utils import TuSimpleJson
+from lane_line_recognition.base import AbstractConverter, LaneLineRecognitionHDF5
 from pathlib import Path
-from lane_line_recognition.base import AbstractConverter
 
 log = logging.getLogger(__name__)
 
@@ -32,9 +32,15 @@ class TuSimpleJsonConverter(AbstractConverter):
         self.TU_SIMPLE_EXPECTED_SHAPE = (1280, 720)
         self.final_binary_json_path = final_binary_json_path
 
+        log.debug(f'TuSimpleJsonConverter params: {locals()}')
+
     def _verify_frame_shape(self, frame_path: np.ndarray) -> Tuple[int, int]:
         """Check that each frame has same expected shape"""
         frame = cv2.imread(frame_path)
+        if not frame:
+            log.warning(f'Frame not found. Frame path: {frame_path}.')
+            raise FileNotFoundError
+
         height, width = frame.shape[0], frame.shape[1]
         if self.TU_SIMPLE_EXPECTED_SHAPE[0] != width or \
                 self.TU_SIMPLE_EXPECTED_SHAPE[1] != height:
@@ -56,22 +62,27 @@ class TuSimpleJsonConverter(AbstractConverter):
             func1d=np.pad,
             axis=1,
             arr=polyline_widths,
-            pad_width=(self.max_num_points - polyline_widths.shape[1], 0),
+            pad_width=(0, self.max_num_points - polyline_widths.shape[1]),
             mode='constant',
             constant_values=(-1,)
         )
+
+        #TODO @Karim: refactor if condition
+        if self.max_lines_per_frame - polyline_widths.shape[0]:
+            polyline_widths = polyline_widths[:self.max_lines_per_frame]
+
         empty_polylines = np.full(shape=((self.max_lines_per_frame - polyline_widths.shape[0]) * self.max_num_points),
                                   fill_value=-1)
         return np.hstack([polyline_widths.flatten(), empty_polylines])
 
-    def __transform_heights(self, original_height: int, polyline_heights: np.ndarray):
+    def __transform_heights(self, original_height: int, polyline_heights: np.ndarray) -> np.ndarray:
         """Scale heights data"""
         polyline_heights = np.where(
             polyline_heights > 0,
             polyline_heights / original_height,
             polyline_heights
         )
-        polyline_heights = np.pad(polyline_heights, pad_width=(self.max_num_points - polyline_heights.shape[0], 0),
+        polyline_heights = np.pad(polyline_heights, pad_width=(0, self.max_num_points - polyline_heights.shape[0]),
                                   mode='constant',
                                   constant_values=(-1,))
         return np.tile(polyline_heights, self.max_lines_per_frame)
@@ -117,9 +128,11 @@ class TuSimpleJsonConverter(AbstractConverter):
             Path(full_path).mkdir(parents=True, exist_ok=True)
 
             with h5py.File(f"{self.final_binary_json_path}/{frame_path}.hdf5", "w") as f:
-                grp = f.create_group(TuSimpleHdf5.group_name)
-                grp.create_dataset(TuSimpleHdf5.dataset_polylines_width, data=polylines_width, dtype='float32')
-                grp.create_dataset(TuSimpleHdf5.dataset_polylines_height, data=polylines_height, dtype='float32')
+                grp = f.create_group(LaneLineRecognitionHDF5.group_name)
+                grp.create_dataset(LaneLineRecognitionHDF5.polyline_widths_dataset_name, data=polylines_width,
+                                   dtype='float32')
+                grp.create_dataset(LaneLineRecognitionHDF5.polyline_heights_dataset_name, data=polylines_height,
+                                   dtype='float32')
 
 
 if __name__ == '__main__':
@@ -145,4 +158,3 @@ if __name__ == '__main__':
     )
     tu_simple_converter.exec()
     log.info('Done...')
-    print('Done....')

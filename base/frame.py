@@ -24,7 +24,6 @@ class FrameHandler(metaclass=MetaSingleton):
                  num_type_of_lines: int,
                  neural_net_width: int,
                  neural_net_height: int,
-                 rescale_polyline_coef: float
                  ):
         """
         :param num_type_of_lines: max lane line type (dotted, solid etc)
@@ -46,7 +45,6 @@ class FrameHandler(metaclass=MetaSingleton):
         self.num_type_of_lines = num_type_of_lines
         self.neural_net_width = neural_net_width
         self.neural_net_height = neural_net_height
-        self.rescale_polyline_coef = rescale_polyline_coef
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         ###
@@ -150,7 +148,6 @@ if __name__ == '__main__':
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     NEURAL_NETWORK_WIDTH = int(os.getenv('NEURAL_NETWORK_WIDTH'))
     NEURAL_NETWORK_HEIGHT = int(os.getenv('NEURAL_NETWORK_HEIGHT'))
-    RESCALE_POLYLINE_COEFFICIENT = float(os.getenv('RESCALE_POLYLINE_COEFFICIENT'))
 
     frame_handler = FrameHandler(
         polyline_model_path=POLYLINE_NEURAL_NETWORK_MODEL_PATH,
@@ -162,7 +159,6 @@ if __name__ == '__main__':
         num_type_of_lines=NUM_TYPE_OF_LINES,
         neural_net_width=NEURAL_NETWORK_WIDTH,
         neural_net_height=NEURAL_NETWORK_WIDTH,
-        rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
     )
 
     initial_frame = cv2.imread(FRAME_PATH)

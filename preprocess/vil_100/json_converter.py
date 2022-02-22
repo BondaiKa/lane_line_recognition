@@ -8,7 +8,7 @@ from lane_line_recognition.utils import one_hot_list_encoder
 import glob
 import os
 from pathlib import Path
-from lane_line_recognition.preprocess.vil_100.utils import VIL100HDF5
+from lane_line_recognition.base import LaneLineRecognitionHDF5
 from fix_json_files import JsonReviewer
 import cv2
 from typing import Union
@@ -44,9 +44,7 @@ class VIL100JsonConverter(AbstractConverter):
         self.frame_dataset_path = frame_dataset_path
         self.final_shape = final_shape
 
-        message = f"VILJsonConverter params:\n {locals()}"
-        log.debug(message)
-        print(message)
+        log.debug(f'VIL100JsonConverter params:\n{locals()}')
 
     @staticmethod
     def __rescale_coordinates(row: np.ndarray, initial_width: int, initial_height: int) -> np.ndarray:
@@ -66,7 +64,7 @@ class VIL100JsonConverter(AbstractConverter):
             lane[Vil100Json.POINTS])  # todo: fix
         # widths, height = np.split(points, 2, axis=1)
         points = self.__rescale_polylines(points, initial_width=initial_width, initial_height=initial_height).flatten()
-        points = np.pad(points, pad_width=(self.max_num_points * 2 - points.shape[0], 0),
+        points = np.pad(points, pad_width=(0,self.max_num_points * 2 - points.shape[0]),
                         mode='constant', constant_values=(-1,))
         points = tuple(np.split(points.reshape(-1, 2), 2, axis=1))
         polyline_widths, polyline_heights = points[0].flatten(), points[1].flatten()
@@ -139,17 +137,19 @@ class VIL100JsonConverter(AbstractConverter):
             polylines, labels = self.get_data_from_file(json_file_path)
             polyline_widths, polyline_heights = polylines[0], polylines[1]
             full_path_list = json_file_path.split('/')
-            full_path_list[-3] = VIL100HDF5.ROOT_FOLDER
+            full_path_list[-3] = LaneLineRecognitionHDF5.root_folder
             root_path = full_path_list[:-1]
             frame_name = full_path_list[-1]
 
             Path(f"{'/'.join(root_path)}").mkdir(parents=True, exist_ok=True)
 
             with h5py.File(f"{'/'.join(root_path)}/{frame_name}.hdf5", "w") as f:
-                grp = f.create_group(VIL100HDF5.GROUP_NAME)
-                grp.create_dataset(VIL100HDF5.POLYLINE_WIDTHS_DATASET_NAME, data=polyline_widths, dtype='float32')
-                grp.create_dataset(VIL100HDF5.POLYLINE_HEIGHTS_DATASET_NAME, data=polyline_heights, dtype='float32')
-                grp.create_dataset(VIL100HDF5.LABELS_DATASET_NAME, data=labels, dtype='float32')
+                grp = f.create_group(LaneLineRecognitionHDF5.group_name)
+                grp.create_dataset(LaneLineRecognitionHDF5.polyline_widths_dataset_name, data=polyline_widths,
+                                   dtype='float32')
+                grp.create_dataset(LaneLineRecognitionHDF5.polyline_heights_dataset_name, data=polyline_heights,
+                                   dtype='float32')
+                grp.create_dataset(LaneLineRecognitionHDF5.labels_dataset_name, data=labels, dtype='float32')
 
 
 if __name__ == '__main__':
@@ -177,4 +177,3 @@ if __name__ == '__main__':
     )
     converter.exec()
     log.info('Done...')
-    print('Done...')

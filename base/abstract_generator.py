@@ -1,14 +1,61 @@
 from abc import ABCMeta, abstractmethod
-from typing import Tuple, List, Callable, Type
+from typing import Tuple, List, Optional, Type, Callable
+from functools import reduce
 import glob
 import logging
 import tensorflow as tf
 import numpy as np
+import random
+import math
 
 log = logging.getLogger(__name__)
 
 
 class AbstractFrameGenerator(metaclass=ABCMeta):
+
+    def __init__(self,
+                 num_type_of_lines,
+                 max_lines_per_frame,
+                 max_num_points,
+                 batch_size: int,
+                 final_shape: Tuple[int, int],
+                 shuffle: bool,
+                 files: Optional[List[str]],
+                 json_files: Optional[List[str]],
+                 rescale=1 / 255.,
+                 color_mode: str = 'grayscale',
+                 ):
+        """
+        :param max_lines_per_frame: maximum number of lines per frame
+        :param max_num_points: maximum number of points un one polyline
+        :param num_type_of_lines: number of possible lines on road
+        :param rescale:
+        :param batch_size: batch size of the dataset
+        :param final_shape: final size for NN input
+        :param shuffle: shuffle flag of frames sequences
+        :param color_mode: `grayscale` or `rgb` color reading frame mod
+        :param json_files: list of json files that contain info about a frame
+        """
+        self.max_lines_per_frame = max_lines_per_frame
+        self.max_num_points = max_num_points
+        self.num_type_of_lines = num_type_of_lines
+        self.rescale = rescale
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.final_shape = final_shape
+        self.color_mode = color_mode
+        self.files = files
+        self.json_files = json_files
+        self.files_count = len(self.files)
+
+        if shuffle:
+            temp = list(zip(self.files, self.json_files))
+            random.shuffle(temp)
+            self.files, self.json_files = zip(*temp)
+
+    def __len__(self):
+        return math.ceil(self.files_count / self.batch_size)
+
     @abstractmethod
     def get_data_from_file(self, *args, **kwargs):
         raise NotImplementedError
@@ -36,8 +83,8 @@ class AbstractFrameGeneratorCreator(metaclass=ABCMeta):
 
     def __init__(self,
                  validation_split: float,
-                 frame_glob_path: str,
-                 json_hdf5_glob_path: str):
+                 frame_glob_path: List[str],
+                 json_hdf5_glob_path: List[str]):
         """
         :param validation_split: split for train/validation sets
         :param frame_glob_path: glob pattern of frames
@@ -47,7 +94,7 @@ class AbstractFrameGeneratorCreator(metaclass=ABCMeta):
         self.__frame_glob_path = frame_glob_path
         self.__json_hdf5_glob_path = json_hdf5_glob_path
 
-    def preprocess_files(self, subset: str, number_files: int) -> Tuple[List[str], List[str]]:
+    def preprocess_files(self, subset: str, number_files: Optional[int]) -> Tuple[List[str], List[str]]:
         """
         Sort and validate files for further loading and sending to NN
 
@@ -55,15 +102,25 @@ class AbstractFrameGeneratorCreator(metaclass=ABCMeta):
         :param number_files: restrict max number of files from dataset
         :return: list of sorted and sliced files and json files
         """
-        message = f'Generator params: {locals()}'
-        log.debug(message)
-        print(message)
+        log.debug(f'Generator params: {locals()}')
 
-        files = sorted(glob.glob(self.__frame_glob_path))
-        log.info(f"Number of files in dataset: {len(files)}. Using in training/validation: {number_files}")
-        files = files[:number_files]
+        files = []
+        for glob_path in self.__frame_glob_path:
+          files.extend(glob.glob(glob_path))
 
-        json_files = sorted(glob.glob(self.__json_hdf5_glob_path))[:number_files]
+        log.info(
+            f"Number of files in dataset: {len(files)}."
+            f"Using in training/validation: {str(number_files) if number_files else 'all files'}"
+        )
+
+        json_files = []
+        for glob_path in self.__json_hdf5_glob_path:
+          json_files.extend(glob.glob(glob_path))
+
+        if number_files:
+          files = files[:number_files]
+          json_files = json_files[:number_files]
+
         files_count = len(files)
         json_files_count = len(json_files)
 
@@ -96,7 +153,7 @@ class AbstractFrameGeneratorCreator(metaclass=ABCMeta):
 
     def flow_from_directory(self,
                             subset: str,
-                            number_files: int,
+                            number_files: Optional[int]=None,
                             *args, **kwargs) -> Callable:
         files, json_files = self.preprocess_files(subset=subset,
                                                   number_files=number_files)
