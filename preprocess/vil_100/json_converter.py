@@ -14,7 +14,6 @@ import cv2
 from typing import Union
 from lane_line_recognition.base import AbstractConverter
 
-from dotenv import load_dotenv
 import logging
 
 log = logging.getLogger(__name__)
@@ -159,6 +158,7 @@ class VIL100JsonConverter(AbstractConverter):
 
 
 if __name__ == '__main__':
+    from dotenv import load_dotenv
     ENV_FILE_NAME = 'vil_100.env'
     dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
     load_dotenv(dotenv_path)

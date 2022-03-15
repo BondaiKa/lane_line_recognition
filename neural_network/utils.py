@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 import tensorflow as tf
 import numpy as np
 import os
@@ -75,6 +74,7 @@ class DrawPolylineOnEpochEnd(tf.keras.callbacks.Callback):
 
 
 if __name__ == '__main__':
+    from dotenv import load_dotenv
     FINAL_WIDTH = int(os.getenv('FINAL_WIDTH'))
     FINAL_HEIGHT = int(os.getenv('FINAL_HEIGHT'))
     IMAGE_PATH = os.getenv('FRAME_DATASET_PATH')

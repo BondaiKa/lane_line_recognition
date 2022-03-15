@@ -7,7 +7,7 @@ import numpy as np
 import math
 import random
 import os
-from dotenv import load_dotenv
+
 
 import logging
 
@@ -63,6 +63,7 @@ class LaneLineFrameGeneratorCreator(AbstractFrameGeneratorCreator):
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
     ENV_FILE_NAME = '.env'
     dotenv_path = os.path.join(os.path.dirname(__file__), ENV_FILE_NAME)
     load_dotenv()

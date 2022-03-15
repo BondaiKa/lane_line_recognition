@@ -4,7 +4,6 @@ from typing import Tuple, List
 import numpy as np
 import cv2
 import tensorflow as tf
-from dotenv import load_dotenv
 import os
 import logging
 
@@ -130,6 +129,7 @@ class FrameHandler(metaclass=MetaSingleton):
 
 
 if __name__ == '__main__':
+    from dotenv import load_dotenv
     log.info("Start working...")
     load_dotenv()
 

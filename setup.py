@@ -1,12 +1,13 @@
 from setuptools import setup, find_packages
 
+
 def readme():
-    with open('README.md') as f:
+    with open('lane_line_recognition/README.md') as f:
         return f.read()
 
 
 def requires():
-    with open('requirements.txt') as f:
+    with open('lane_line_recognition/requirements.txt') as f:
         return f.read().splitlines()
 
 

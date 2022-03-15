@@ -2,7 +2,6 @@
 import h5py
 import json
 import numpy as np
-from dotenv import load_dotenv
 import os
 from typing import Tuple
 import logging
@@ -144,6 +143,7 @@ class TuSimpleJsonConverter(AbstractConverter):
 
 
 if __name__ == '__main__':
+    from dotenv import load_dotenv
     ENV_FILE_NAME = 'tu_simple.env'
     dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
     load_dotenv(dotenv_path)

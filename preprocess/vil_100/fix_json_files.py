@@ -1,5 +1,4 @@
 import json
-from dotenv import load_dotenv
 import os
 import glob
 import cv2
@@ -44,6 +43,7 @@ class JsonReviewer:
 
 
 if __name__ == '__main__':
+    from dotenv import load_dotenv
     log = logging.getLogger(__name__)
     log.debug('Start working...')
     load_dotenv()
