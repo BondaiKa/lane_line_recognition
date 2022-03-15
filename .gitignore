@@ -9,3 +9,5 @@ hdf5/
 tu_simple_test/
 *.egg-info/
 *.tar.gz
+build/
+*.whl
