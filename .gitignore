@@ -7,3 +7,5 @@ lane_line
 hdf5/
 *.json
 tu_simple_test/
+*.egg-info/
+*.tar.gz

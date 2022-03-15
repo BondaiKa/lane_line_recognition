@@ -72,9 +72,6 @@ class FrameHandler(metaclass=MetaSingleton):
         labels = np.zeros(shape=(self.max_lines_per_frame, self.num_type_of_lines))
         labels[0][1] = 1
         labels[1][1] = 1
-        labels[2][1] = 1
-        labels[3][1] = 1
-        labels[4][1] = 1
 
         return (polyline_widths, polyline_height), labels
 
@@ -88,13 +85,11 @@ class FrameHandler(metaclass=MetaSingleton):
         :return:
         """
         polyline_widths, polyline_height = polylines
-        polylines = np.apply_along_axis(func1d=self._concat_polyline,
-                                        axis=1,
-                                        arr=polyline_widths.reshape(-1, self.max_num_points),
-                                        polyline_height=polyline_height)
+        polyline_widths *= self.neural_net_width
+        polyline_height *= self.neural_net_height
+        polylines = self._concat_polyline(polyline_width=polyline_widths.reshape(-1, self.max_num_points),polyline_height=polyline_height)
         # TODO @Karim: we can't just reshape because we have to recognize which label corresponds coordinate
         polylines = self.filter_coordinates(np.split(polylines, self.max_lines_per_frame))
-        polylines = list(map(lambda polyline: polyline / self.rescale_polyline_coef, polylines))
         colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label > 0.5, 1, 0)), labels))
         res = tuple(zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))))
         return res if res else (list(), list())

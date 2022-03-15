@@ -25,7 +25,7 @@ if __name__ == "__main__":
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     NEURAL_NETWORK_WIDTH = int(os.getenv('NEURAL_NETWORK_WIDTH'))
     NEURAL_NETWORK_HEIGHT = int(os.getenv('NEURAL_NETWORK_HEIGHT'))
-    RESCALE_POLYLINE_COEFFICIENT = float(os.getenv('RESCALE_POLYLINE_COEFFICIENT'))
+
 
     camera = FakeVideoHandler(camera_path=CAMERA_PATH)
     frame_handler = FrameHandler(
@@ -38,7 +38,6 @@ if __name__ == "__main__":
         num_type_of_lines=NUM_TYPE_OF_LINES,
         neural_net_width=NEURAL_NETWORK_WIDTH,
         neural_net_height=NEURAL_NETWORK_WIDTH,
-        rescale_polyline_coef=RESCALE_POLYLINE_COEFFICIENT,
     )
 
     camera.process(frame_handler=frame_handler)
