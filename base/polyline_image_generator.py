@@ -86,8 +86,8 @@ if __name__ == "__main__":
 
     data_gen = LaneLineFrameGeneratorCreator(
         validation_split=VALIDATION_SPLIT,
-        frame_glob_path=image_glob_path,
-        json_hdf5_glob_path=json_hdf5_glob_path,
+        frame_glob_path=[image_glob_path],
+        json_hdf5_glob_path=[json_hdf5_glob_path],
     )
 
     train_generator = data_gen.flow_from_directory(

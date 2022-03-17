@@ -8,7 +8,6 @@ import math
 import random
 import os
 
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -29,7 +28,8 @@ class LineLabelFrameGenerator(AbstractFrameGenerator, Sequence):
         """
         file = h5py.File(json_path, 'r')
         group = file.get(LaneLineRecognitionHDF5.group_name)
-        return group.get(LaneLineRecognitionHDF5.labels_dataset_name)
+        return group.get(LaneLineRecognitionHDF5.label_1_dataset_name), group.get(
+            LaneLineRecognitionHDF5.label_2_dataset_name)
 
     def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
         batch_frames_path = self.files[idx * self.batch_size:
@@ -37,17 +37,19 @@ class LineLabelFrameGenerator(AbstractFrameGenerator, Sequence):
         batch_json_path = self.json_files[idx * self.batch_size:
                                           (idx + 1) * self.batch_size]
 
-        labels_output = np.empty(shape=(0, self.num_type_of_lines * self.max_lines_per_frame))
+        labels_1_output = np.empty(shape=(0, self.num_type_of_lines))
+        labels_2_output = np.empty(shape=(0, self.num_type_of_lines))
         frame_output = np.empty(shape=(0, self.final_shape[0], self.final_shape[1], 1))
 
         for _frame, _json in zip(batch_frames_path, batch_json_path):
-            labels = self.get_data_from_file(_json)
-            labels_output = np.vstack((labels_output, labels))
+            label_1, label_2 = self.get_data_from_file(_json)
+            labels_1_output = np.vstack((labels_1_output, label_1))
+            labels_2_output = np.vstack((labels_2_output, label_2))
 
             frame = self.get_frame_from_file(_frame)
             frame_output = np.vstack((frame_output, frame))
 
-        return frame_output, labels_output
+        return frame_output, (labels_1_output, labels_2_output)
 
 
 class LaneLineFrameGeneratorCreator(AbstractFrameGeneratorCreator):
@@ -58,9 +60,10 @@ class LaneLineFrameGeneratorCreator(AbstractFrameGeneratorCreator):
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
-    ENV_FILE_NAME = '.env'
+
+    ENV_FILE_NAME = 'vil_100.env'
     dotenv_path = os.path.join(os.path.dirname(__file__), ENV_FILE_NAME)
-    load_dotenv()
+    load_dotenv(dotenv_path)
 
     AMOUNT_OF_FRAMES = 10000
     BATCH_SIZE = 32
@@ -80,8 +83,8 @@ if __name__ == "__main__":
 
     data_gen = LaneLineFrameGeneratorCreator(
         validation_split=VALIDATION_SPLIT,
-        frame_glob_path=image_glob_path,
-        json_hdf5_glob_path=json_hdf5_glob_path,
+        frame_glob_path=[image_glob_path],
+        json_hdf5_glob_path=[json_hdf5_glob_path],
     )
 
     train_generator = data_gen.flow_from_directory(

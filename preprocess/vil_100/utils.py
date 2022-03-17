@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from typing import Tuple, List
+from lane_line_recognition.utils import Color
 
 LANE_ID_FULL_LIST = set(range(1, 10))
 
@@ -45,16 +46,9 @@ class LineType:
 
 
 VIL_100_colour_line = {
-    LineType.SINGLE_WHITE_SOLID: (255, 0, 0),
-    LineType.SINGLE_WHITE_DOTTED: (0, 255, 0),
-    LineType.OTHER_LINE: (0, 0, 255),
-    # 4: (255, 255, 0),  # single yellow dotted
-    # 5: (255, 0, 0),  # double white solid
-    # 6: (255, 125, 0),  # double yellow solid
-    # 7: (255, 255, 0),  # double yellow dotted
-    # 8: (255, 0, 0),  # double white solid dotted
-    # 9: (255, 0, 0),  # double white dotted solid
-    # 10: (255, 0, 0),  # double solid white and yellow
+    LineType.SINGLE_WHITE_SOLID: Color.red,
+    LineType.SINGLE_WHITE_DOTTED: Color.green,
+    LineType.OTHER_LINE: Color.purple,
 }
 
 
@@ -78,4 +72,5 @@ def get_valid_attribute(attr: int) -> int:
 
 def get_colour_from_one_hot_vector(vector: np.ndarray) -> Tuple[int, int, int]:
     """Get colour from one hot vector"""
+    #TODO @Karim: fix color. Dash should be green and solid - red
     return VIL_100_colour_line.get(int(np.argmax(vector, axis=0)), VIL_100_colour_line[LineType.OTHER_LINE])

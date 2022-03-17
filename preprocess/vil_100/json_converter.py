@@ -134,12 +134,14 @@ class VIL100JsonConverter(AbstractConverter):
             polyline_heights_output = np.append(polyline_heights_output, polyline_heights)
             labels_output = np.append(labels_output, label)
 
-        return (polyline_widths_output, polyline_heights_output), labels_output
+        return (polyline_widths_output, polyline_heights_output), np.split(labels_output, self.max_lines_per_frame)
 
     def exec(self) -> None:
         """Convert and save json files to new hdf5 files"""
         for json_file_path in self.json_files:
             polylines, labels = self.get_data_from_file(json_file_path)
+
+            label_1, label_2 = labels[0], labels[1]
             polyline_widths, polyline_heights = polylines[0], polylines[1]
             full_path_list = json_file_path.split('/')
             full_path_list[-3] = LaneLineRecognitionHDF5.root_folder
@@ -154,11 +156,13 @@ class VIL100JsonConverter(AbstractConverter):
                                    dtype='float32')
                 grp.create_dataset(LaneLineRecognitionHDF5.polyline_heights_dataset_name, data=polyline_heights,
                                    dtype='float32')
-                grp.create_dataset(LaneLineRecognitionHDF5.labels_dataset_name, data=labels, dtype='float32')
+                grp.create_dataset(LaneLineRecognitionHDF5.label_1_dataset_name, data=label_1, dtype='int')
+                grp.create_dataset(LaneLineRecognitionHDF5.label_2_dataset_name, data=label_2, dtype='int')
 
 
 if __name__ == '__main__':
     from dotenv import load_dotenv
+
     ENV_FILE_NAME = 'vil_100.env'
     dotenv_path = join(dirname(__file__), ENV_FILE_NAME)
     load_dotenv(dotenv_path)

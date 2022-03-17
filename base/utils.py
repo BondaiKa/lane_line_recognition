@@ -8,7 +8,8 @@ class LaneLineRecognitionHDF5:
     group_name = 'frame_polylines_labels'
     polyline_widths_dataset_name = 'polyline_widths'
     polyline_heights_dataset_name = 'polyline_heights'
-    labels_dataset_name = 'labels'
+    label_1_dataset_name = 'label_1'
+    label_2_dataset_name = 'label_2'
 
 
 def __filter_coordination_for_resolution(polyline: np.ndarray, input_shape: Tuple[int, int, int]) -> np.ndarray:

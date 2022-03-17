@@ -65,16 +65,10 @@ class FrameHandler(metaclass=MetaSingleton):
         frame = tf.image.rgb_to_grayscale(frame).numpy()
         frame = frame.reshape(1, self.neural_net_width, self.neural_net_height, 1)
         polyline_widths, polyline_height = self.polyline_model.predict(frame)
+        label_1, label_2 = self.label_model.predict(frame)
+        return (polyline_widths, polyline_height), (label_1, label_2)
 
-        # TODO: get labels from another nn!
-        # labels = self.label_model.predict(frame)
-        labels = np.zeros(shape=(self.max_lines_per_frame, self.num_type_of_lines))
-        labels[0][1] = 1
-        labels[1][1] = 1
-
-        return (polyline_widths, polyline_height), labels
-
-    def postprocess_frame(self, polylines: Tuple[np.ndarray, np.ndarray], labels: List[np.ndarray]) \
+    def postprocess_frame(self, polylines: Tuple[np.ndarray, np.ndarray], labels: Tuple[np.ndarray]) \
             -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get Separated polylines and labels values (number of line)-n numpy arrays respectively
@@ -89,7 +83,7 @@ class FrameHandler(metaclass=MetaSingleton):
         polylines = self._concat_polyline(polyline_width=polyline_widths.reshape(-1, self.max_num_points),polyline_height=polyline_height)
         # TODO @Karim: we can't just reshape because we have to recognize which label corresponds coordinate
         polylines = self.filter_coordinates(np.split(polylines, self.max_lines_per_frame))
-        colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label > 0.5, 1, 0)), labels))
+        colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label.flatten() > 0.5, 1, 0)), labels))
         res = tuple(zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))))
         return res if res else (list(), list())
 
@@ -163,8 +157,8 @@ if __name__ == '__main__':
     polylines, colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels)
     result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
 
-    rescaled_polylines = frame_handler.rescale_polylines(polylines)
-    labeled_intial_frame = frame_handler.draw_popylines(frame=initial_frame, list_of_points=rescaled_polylines,
-                                                        list_of_colors=colors)
+    # rescaled_polylines = frame_handler.rescale_polylines(polylines)
+    # labeled_intial_frame = frame_handler.draw_popylines(frame=initial_frame, list_of_points=rescaled_polylines,
+    #                                                     list_of_colors=colors)
     cv2.imshow(f'Final frame', result)
     cv2.waitKey(1)
