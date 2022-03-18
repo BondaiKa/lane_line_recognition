@@ -37,8 +37,8 @@ class FrameHandler(metaclass=MetaSingleton):
         label_model = tf.keras.models.load_model(label_model_path)
         self.polyline_model = polyline_model
         self.label_model = label_model
-        self.width = width
-        self.height = height
+        self.camera_width = width
+        self.camera_height = height
         self.max_lines_per_frame = max_lines_per_frame
         self.max_num_points = max_num_points
         self.num_type_of_lines = num_type_of_lines
@@ -49,7 +49,7 @@ class FrameHandler(metaclass=MetaSingleton):
         ###
         # TODO @Karim: apply filter
         ###
-        width, height = self.width, self.height
+        width, height = self.camera_width, self.camera_height
         _frame = np.copy(frame)
         log.debug(f"Resizing frame to {self.neural_net_width}x{self.neural_net_height} resolution...")
         _frame = cv2.resize(_frame, dsize=(self.neural_net_width, self.neural_net_height), interpolation=cv2.INTER_AREA)
@@ -68,21 +68,25 @@ class FrameHandler(metaclass=MetaSingleton):
         label_1, label_2 = self.label_model.predict(frame)
         return (polyline_widths, polyline_height), (label_1, label_2)
 
-    def postprocess_frame(self, polylines: Tuple[np.ndarray, np.ndarray], labels: Tuple[np.ndarray]) \
+    def postprocess_frame(self, polylines: Tuple[np.ndarray, np.ndarray], labels: Tuple[np.ndarray], width: int,
+                          height: int) \
             -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get Separated polylines and labels values (number of line)-n numpy arrays respectively
 
         :param polylines:
         :param labels:
+        :param width:
+        :param height:
         :return:
         """
         polyline_widths, polyline_height = polylines
-        polyline_widths *= self.neural_net_width
-        polyline_height *= self.neural_net_height
-        polylines = self._concat_polyline(polyline_width=polyline_widths.reshape(-1, self.max_num_points),polyline_height=polyline_height)
+        polyline_widths *= width
+        polyline_height *= height
+        polylines = self._concat_polyline(polyline_width=polyline_widths.reshape(-1, self.max_num_points),
+                                          polyline_height=polyline_height)
         # TODO @Karim: we can't just reshape because we have to recognize which label corresponds coordinate
-        polylines = self.filter_coordinates(np.split(polylines, self.max_lines_per_frame))
+        polylines = self.filter_coordinates(np.split(polylines, self.max_lines_per_frame), width=width, height=height)
         colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label.flatten() > 0.5, 1, 0)), labels))
         res = tuple(zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))))
         return res if res else (list(), list())
@@ -91,15 +95,17 @@ class FrameHandler(metaclass=MetaSingleton):
     def _concat_polyline(polyline_width: np.ndarray, polyline_height: np.ndarray) -> np.ndarray:
         return np.concatenate((polyline_width.reshape(-1, 1), polyline_height.T), axis=1)
 
-    def filter_coordination_for_resolution(self, polyline: np.ndarray) -> np.ndarray:
+    def filter_coordination_for_resolution(self, polyline: np.ndarray, width: int,
+                                           height: int) -> np.ndarray:
         valid = ((polyline[:, 0] > 0) & (polyline[:, 1] > 0)
-                 & (polyline[:, 0] < self.width) & (polyline[:, 1] < self.height))
+                 & (polyline[:, 0] < width) & (polyline[:, 1] < height))
         return polyline[valid]
 
-    def filter_coordinates(self, list_of_polylines: List[np.ndarray]) -> np.ndarray:
+    def filter_coordinates(self, list_of_polylines: List[np.ndarray], width: int,
+                           height: int) -> np.ndarray:
         """Remove empty points and coordinates x or y, that is less than 0"""
         list_of_polylines = list(map(lambda x: x.reshape(-1, 2), list_of_polylines))
-        return list(map(lambda polyline: self.filter_coordination_for_resolution(polyline),
+        return list(map(lambda polyline: self.filter_coordination_for_resolution(polyline, width=width, height=height),
                         list_of_polylines))
 
     def rescale_polylines(self, polylines: List[np.ndarray]) -> List[np.ndarray]:
@@ -124,6 +130,7 @@ class FrameHandler(metaclass=MetaSingleton):
 
 if __name__ == '__main__':
     from dotenv import load_dotenv
+
     log.info("Start working...")
     load_dotenv()
 
@@ -154,7 +161,8 @@ if __name__ == '__main__':
     cv2.imshow(f'Original frame', initial_frame)
     frame = frame_handler.preprocess_frame(initial_frame)
     polylines, labels = frame_handler.recognize(frame)
-    polylines, colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels)
+    polylines, colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels, width=NEURAL_NETWORK_WIDTH,
+                                                        height=NEURAL_NETWORK_HEIGHT)
     result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
 
     # rescaled_polylines = frame_handler.rescale_polylines(polylines)
