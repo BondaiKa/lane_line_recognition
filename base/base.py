@@ -29,6 +29,7 @@ def calculate_perspective_transform_matrix(width: int, height: int, reverse_flag
     :return: matrix for transformation the frame
     """
     # TODO @Karim: check on real Audi Q2 input frame
+    # TODO: find right values for perspective transformation
     high_left_crd, high_right_crd = (550, 530), (700, 530)
     down_left_crd, down_right_crd, = (0, height - 150), (width, height - 150)
 

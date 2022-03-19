@@ -51,6 +51,12 @@ VIL_100_colour_line = {
     LineType.OTHER_LINE: Color.purple,
 }
 
+VIL_100_lane_name = {
+    LineType.SINGLE_WHITE_SOLID: 'Solid',
+    LineType.SINGLE_WHITE_DOTTED: 'Dotted',
+    LineType.OTHER_LINE: 'Other',
+}
+
 
 def get_valid_attribute(attr: int) -> int:
     """Change attribute from VIL100_dataset dataset to normal number without missings"""

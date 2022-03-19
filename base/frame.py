@@ -1,11 +1,14 @@
-from lane_line_recognition.base import MetaSingleton
-from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector
 from typing import Tuple, List
 import numpy as np
 import cv2
 import tensorflow as tf
 import os
 import logging
+
+from lane_line_recognition.base import MetaSingleton
+from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector, VIL_100_lane_name
+from base import transform_frame
+from lane_line_recognition.utils import Color
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +83,7 @@ class FrameHandler(metaclass=MetaSingleton):
         :param height:
         :return:
         """
+        polylines = np.copy(polylines)
         polyline_widths, polyline_height = polylines
         polyline_widths *= width
         polyline_height *= height
@@ -90,6 +94,23 @@ class FrameHandler(metaclass=MetaSingleton):
         colors = list(map(lambda label: get_colour_from_one_hot_vector(np.where(label.flatten() > 0.5, 1, 0)), labels))
         res = tuple(zip(*filter(lambda poly_lab_tuple: poly_lab_tuple[1] is not None, zip(polylines, colors))))
         return res if res else (list(), list())
+
+    @staticmethod
+    def get_labels_probability(lane_labels: Tuple[np.array]) -> Tuple[Tuple[str, float]]:
+        return tuple([(VIL_100_lane_name.get(np.argmax(label)), np.max(label)) for label in lane_labels])
+
+    @staticmethod
+    def draw_probability(frame: np.ndarray, labels_probability: Tuple[Tuple[str, float]]) -> np.ndarray:
+        frame = np.copy(frame)
+        for idx, label_name__prob in enumerate(labels_probability):
+            frame = cv2.putText(frame, f"{idx + 1} {label_name__prob[0]}: {label_name__prob[1]:.3f}",
+                                (25, 25 * (idx + 1)), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, Color.red, 1, cv2.LINE_AA)
+        return frame
+
+    @staticmethod
+    def get_filled_polyline_coordinates(polylines: Tuple[np.ndarray]) -> Tuple[
+        Tuple[int, int], Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
+        return np.array([polylines[1][-2], polylines[1][0], polylines[0][0], polylines[0][-2]])
 
     @staticmethod
     def _concat_polyline(polyline_width: np.ndarray, polyline_height: np.ndarray) -> np.ndarray:
@@ -108,10 +129,6 @@ class FrameHandler(metaclass=MetaSingleton):
         return list(map(lambda polyline: self.filter_coordination_for_resolution(polyline, width=width, height=height),
                         list_of_polylines))
 
-    def rescale_polylines(self, polylines: List[np.ndarray]) -> List[np.ndarray]:
-        # TODO: @Karim rescale polylines to initial resolution
-        return polylines
-
     @classmethod
     def draw_popylines(cls, frame: np.ndarray, list_of_points: List[np.ndarray],
                        list_of_colors: List[np.ndarray]) -> np.ndarray:
@@ -123,9 +140,15 @@ class FrameHandler(metaclass=MetaSingleton):
         :param list_of_labels: list of label that corresponds to list of polylines
         :return:
         """
+        frame = np.copy(frame)
         for points, color in zip(list_of_points, list_of_colors):
-            frame = cv2.polylines(frame, np.int32(points).reshape((-1, 1, 2)), 1, color, thickness=3)
+            frame = cv2.polylines(frame, np.int32(points).reshape((-1, 1, 2)), 1, color, thickness=5)
         return frame
+
+    @staticmethod
+    def draw_filled_polyline(frame, coordinates):
+        frame = np.copy(frame)
+        return cv2.fillPoly(frame, pts=[np.int32(coordinates).reshape((-1, 1, 2))], color=Color.yellow)
 
 
 if __name__ == '__main__':
@@ -158,15 +181,30 @@ if __name__ == '__main__':
     )
 
     initial_frame = cv2.imread(FRAME_PATH)
-    cv2.imshow(f'Original frame', initial_frame)
+    initial_width = initial_frame.shape[1]
+    initial_height = initial_frame.shape[0]
+    # cv2.imshow(f'Original frame', initial_frame)
     frame = frame_handler.preprocess_frame(initial_frame)
     polylines, labels = frame_handler.recognize(frame)
-    polylines, colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels, width=NEURAL_NETWORK_WIDTH,
-                                                        height=NEURAL_NETWORK_HEIGHT)
-    result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines, list_of_colors=colors)
+    # polylines_small, colors_small = frame_handler.postprocess_frame(polylines=polylines, labels=labels,
+    #                                                                 width=NEURAL_NETWORK_WIDTH,
+    #                                                                 height=NEURAL_NETWORK_HEIGHT)
+    # small_result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines_small,
+    #                                             list_of_colors=colors_small)
+    # cv2.imshow(f'Small frame', small_result)
+    labels_probability = frame_handler.get_labels_probability(labels)
+    full_polylines, full_colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels,
+                                                                  width=initial_frame.shape[1],
+                                                                  height=initial_frame.shape[0])
+    coordinates = frame_handler.get_filled_polyline_coordinates(polylines=full_polylines)
+    test_result = frame_handler.draw_filled_polyline(frame=initial_frame, coordinates=coordinates)
+    cv2.imshow(f'Filled area frame', test_result)
+    full_result = frame_handler.draw_probability(frame=initial_frame, labels_probability=labels_probability)
+    full_result = frame_handler.draw_popylines(frame=full_result, list_of_points=full_polylines,
+                                               list_of_colors=full_colors)
+    cv2.imshow(f'Final frame', full_result)
 
-    # rescaled_polylines = frame_handler.rescale_polylines(polylines)
-    # labeled_intial_frame = frame_handler.draw_popylines(frame=initial_frame, list_of_points=rescaled_polylines,
-    #                                                     list_of_colors=colors)
-    cv2.imshow(f'Final frame', result)
+    presp_frame = transform_frame(initial_frame, initial_width, initial_height)
+    cv2.imshow('Perspective transform frame', presp_frame)
+
     cv2.waitKey(1)

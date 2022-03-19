@@ -5,11 +5,11 @@ from typing import NamedTuple
 
 
 class Color(NamedTuple):
-    red = (255, 0, 0)
+    red = (0, 0, 255)
     green = (0, 255, 0)
-    blue = (0, 0, 255)
+    blue = (255, 0, 0)
     purple = (255, 0, 255)
-    yellow = (255, 255, 0)
+    yellow = (0, 255, 255)
 
     sequence = [red, green, blue, purple, yellow]
 
