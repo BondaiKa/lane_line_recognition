@@ -25,7 +25,9 @@ class FakeVideoHandler(AbstractVideoHandler):
                                                                           width=frame_dis.shape[1],
                                                                           height=frame_dis.shape[0])
             #TODO @Karim: rescale polyline after reducing values in the dataset
-            full_result = frame_handler.draw_probability(frame=frame_dis, labels_probability=labels_probability)
+            coordinates = frame_handler.get_filled_polyline_coordinates(polylines=full_polylines)
+            full_result = frame_handler.draw_filled_polyline(frame=frame_dis, coordinates=coordinates)
+            full_result = frame_handler.draw_probability(frame=full_result, labels_probability=labels_probability)
             full_result = frame_handler.draw_popylines(frame=full_result, list_of_points=full_polylines,
                                                        list_of_colors=full_colors)
             cv2.imshow(f'Final frame', full_result)

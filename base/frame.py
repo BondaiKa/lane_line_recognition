@@ -197,9 +197,8 @@ if __name__ == '__main__':
                                                                   width=initial_frame.shape[1],
                                                                   height=initial_frame.shape[0])
     coordinates = frame_handler.get_filled_polyline_coordinates(polylines=full_polylines)
-    test_result = frame_handler.draw_filled_polyline(frame=initial_frame, coordinates=coordinates)
-    cv2.imshow(f'Filled area frame', test_result)
-    full_result = frame_handler.draw_probability(frame=initial_frame, labels_probability=labels_probability)
+    full_result = frame_handler.draw_filled_polyline(frame=initial_frame, coordinates=coordinates)
+    full_result = frame_handler.draw_probability(frame=full_result, labels_probability=labels_probability)
     full_result = frame_handler.draw_popylines(frame=full_result, list_of_points=full_polylines,
                                                list_of_colors=full_colors)
     cv2.imshow(f'Final frame', full_result)
