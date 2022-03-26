@@ -52,7 +52,7 @@ class LineLabelFrameGenerator(AbstractFrameGenerator, Sequence):
         return frame_output, (labels_1_output, labels_2_output)
 
 
-class LaneLineFrameGeneratorCreator(AbstractFrameGeneratorCreator):
+class LabelLaneFrameGeneratorCreator(AbstractFrameGeneratorCreator):
 
     def get_generator(self) -> Type[Sequence]:
         return LineLabelFrameGenerator
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_hdf5_glob_path = JSON_HDF5_DATASET_PATH + '/*/*.hdf5'
 
-    data_gen = LaneLineFrameGeneratorCreator(
+    data_gen = LabelLaneFrameGeneratorCreator(
         validation_split=VALIDATION_SPLIT,
         frame_glob_path=[image_glob_path],
         json_hdf5_glob_path=[json_hdf5_glob_path],

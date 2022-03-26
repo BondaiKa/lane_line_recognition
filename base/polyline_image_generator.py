@@ -53,7 +53,7 @@ class PolylineFrameGenerator(AbstractFrameGenerator, Sequence):
         return frame_output, (polyline_width_output, polyline_height_output)
 
 
-class LaneLineFrameGeneratorCreator(AbstractFrameGeneratorCreator):
+class PolylineLaneFrameGeneratorCreator(AbstractFrameGeneratorCreator):
 
     def get_generator(self) -> Type[Sequence]:
         return PolylineFrameGenerator
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     image_glob_path = IMAGE_PATH + '/*/*.jpg'
     json_hdf5_glob_path = JSON_HDF5_DATASET_PATH + '/*/*.hdf5'
 
-    data_gen = LaneLineFrameGeneratorCreator(
+    data_gen = PolylineLaneFrameGeneratorCreator(
         validation_split=VALIDATION_SPLIT,
         frame_glob_path=[image_glob_path],
         json_hdf5_glob_path=[json_hdf5_glob_path],
