@@ -9,7 +9,7 @@ import cv2
 from os.path import join, dirname
 from pathlib import Path
 
-from utils import TuSimpleJson
+from lane_line_recognition.preprocess.tu_simple.utils import TuSimpleJson
 from lane_line_recognition.base import AbstractConverter, LaneLineRecognitionHDF5
 
 log = logging.getLogger(__name__)
