@@ -1,10 +1,11 @@
 import tensorflow as tf
 import numpy as np
 import os
-from lane_line_recognition.base import draw_polyline_in_frame
 from tensorflow.keras.utils import Sequence
 from typing import List
 from cv2 import imshow as cv2_imshow
+
+from lane_line_recognition.base import draw_polyline_in_frame
 
 
 class DrawPolylineOnEpochEnd(tf.keras.callbacks.Callback):

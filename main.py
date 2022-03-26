@@ -1,7 +1,7 @@
 import logging
 import os
 
-from fake_video_handler import FakeVideoHandler
+from lane_line_recognition.fake_video_handler import FakeVideoHandler
 from lane_line_recognition.base import FrameHandler
 
 log = logging.getLogger(__name__)

@@ -7,9 +7,10 @@ from typing import Tuple
 import logging
 import cv2
 from os.path import join, dirname
+from pathlib import Path
+
 from utils import TuSimpleJson
 from lane_line_recognition.base import AbstractConverter, LaneLineRecognitionHDF5
-from pathlib import Path
 
 log = logging.getLogger(__name__)
 

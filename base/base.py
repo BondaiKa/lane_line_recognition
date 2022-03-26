@@ -1,5 +1,4 @@
 import logging
-from typing import Union
 import cv2
 import numpy as np
 from typing import Tuple, List
@@ -30,8 +29,8 @@ def calculate_perspective_transform_matrix(width: int, height: int, reverse_flag
     """
     # TODO @Karim: check on real Audi Q2 input frame
     # TODO: find right values for perspective transformation
-    high_left_crd, high_right_crd = (550, 530), (700, 530)
-    down_left_crd, down_right_crd, = (0, height - 150), (width, height - 150)
+    high_left_crd, high_right_crd = (225, 300), (400, 300)
+    down_left_crd, down_right_crd, = (0, height + 150), (width, height + 150)
 
     initial_matrix = np.float32([[high_left_crd, high_right_crd,
                                   down_left_crd, down_right_crd]])

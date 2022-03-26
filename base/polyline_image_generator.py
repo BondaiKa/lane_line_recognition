@@ -1,15 +1,12 @@
-from lane_line_recognition.base import AbstractFrameGenerator, AbstractFrameGeneratorCreator
-from lane_line_recognition.base.utils import LaneLineRecognitionHDF5, test_generator
 from tensorflow.keras.utils import Sequence
 from typing import Tuple, List, Optional, Type
 import h5py
 import numpy as np
-import math
-import random
 import os
-
-
 import logging
+
+from lane_line_recognition.base import AbstractFrameGenerator, AbstractFrameGeneratorCreator
+from lane_line_recognition.base.utils import LaneLineRecognitionHDF5, test_generator
 
 log = logging.getLogger(__name__)
 

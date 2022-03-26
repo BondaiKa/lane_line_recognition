@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from typing import Tuple, List, Optional, Type, Callable
-from functools import reduce
 import glob
 import logging
 import tensorflow as tf

@@ -2,19 +2,18 @@ import h5py
 from typing import List, Dict, Tuple
 import json
 from os.path import join, dirname
-from lane_line_recognition.preprocess.vil_100.utils import Vil100Json, LANE_ID_FULL_LIST, LineType, get_valid_attribute
 import numpy as np
-from lane_line_recognition.utils import one_hot_list_encoder
 import glob
 import os
 from pathlib import Path
-from lane_line_recognition.base import LaneLineRecognitionHDF5
-from fix_json_files import JsonReviewer
 import cv2
 from typing import Union
-from lane_line_recognition.base import AbstractConverter
-
 import logging
+
+from lane_line_recognition.preprocess.vil_100.utils import Vil100Json, LANE_ID_FULL_LIST, LineType, get_valid_attribute
+from lane_line_recognition.base import LaneLineRecognitionHDF5, AbstractConverter
+from lane_line_recognition.preprocess.vil_100.fix_json_files import JsonReviewer
+from lane_line_recognition.utils import one_hot_list_encoder
 
 log = logging.getLogger(__name__)
 

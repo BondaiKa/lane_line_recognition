@@ -5,9 +5,8 @@ import tensorflow as tf
 import os
 import logging
 
-from lane_line_recognition.base import MetaSingleton
+from lane_line_recognition.base import MetaSingleton, transform_frame
 from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector, VIL_100_lane_name
-from base import transform_frame
 from lane_line_recognition.utils import Color
 
 log = logging.getLogger(__name__)
@@ -203,7 +202,7 @@ if __name__ == '__main__':
                                                list_of_colors=full_colors)
     cv2.imshow(f'Final frame', full_result)
 
-    presp_frame = transform_frame(initial_frame, initial_width, initial_height)
+    presp_frame = transform_frame(full_result, initial_width, initial_height)
     cv2.imshow('Perspective transform frame', presp_frame)
 
     cv2.waitKey(1)
