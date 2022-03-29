@@ -30,9 +30,9 @@ def concat_polyline(polyline_width: np.ndarray, polyline_height: np.ndarray) -> 
 
 
 def draw_polyline_in_frame(frame: np.ndarray, polylines: Tuple[np.ndarray, np.ndarray],
-                           thickness: int, max_lines_per_frame: int, input_shape: Tuple[int, int, int]) -> np.ndarray:
+                           thickness: int, max_lines_per_frame: int, input_shape: Tuple[int, int, int],idx=0) -> np.ndarray:
     copy_frame = np.copy(frame)
-    polyline_widths, polyline_heights = polylines[0][0], polylines[1][0]
+    polyline_widths, polyline_heights = polylines[0][idx], polylines[1][idx]
     polyline_width_list = np.split(polyline_widths, max_lines_per_frame)
     polyline_height_list = np.split(polyline_heights, max_lines_per_frame)
 
@@ -60,5 +60,5 @@ def test_generator(generator, input_shape: Tuple[int, int, int],
         input_shape=input_shape,
         thickness=2
     )
-    cv2.imshow(f'frame_with_polyline_{draw_original_polylines_frame.shape}', draw_original_polylines_frame)
+    cv2_imshow(draw_original_polylines_frame * 255)
     cv2.waitKey(0)
