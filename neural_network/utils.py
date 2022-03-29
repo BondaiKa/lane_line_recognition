@@ -4,7 +4,7 @@ import os
 from tensorflow.keras.utils import Sequence
 from typing import List, Tuple
 from lane_line_recognition.base import draw_polyline_in_frame
-
+from google.colab.patches import cv2_imshow
 
 class DrawPolylineOnEpochEnd(tf.keras.callbacks.Callback):
     """Draw polyline at the end on the epoch to test the net. It skip one batch on validation but похуй"""
