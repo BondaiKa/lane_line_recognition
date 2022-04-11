@@ -4,12 +4,14 @@ import cv2
 import tensorflow as tf
 import os
 import logging
+import time
 
 from lane_line_recognition.base import MetaSingleton, transform_frame
 from lane_line_recognition.preprocess.vil_100 import get_colour_from_one_hot_vector, VIL_100_lane_name
 from lane_line_recognition.utils import Color
 
 log = logging.getLogger(__name__)
+logging.basicConfig(format="[%(asctime)s] [%(levelname)s] [%(funcName)s] %(message)s", level=logging.INFO)
 
 
 class FrameHandler(metaclass=MetaSingleton):
@@ -66,8 +68,10 @@ class FrameHandler(metaclass=MetaSingleton):
     def recognize(self, frame: np.ndarray) -> Tuple[Tuple[np.ndarray, np.ndarray], np.ndarray]:
         frame = tf.image.rgb_to_grayscale(frame).numpy()
         frame = frame.reshape(1, self.neural_net_width, self.neural_net_height, 1)
+        initial_time = time.monotonic()
         polyline_widths, polyline_height = self.polyline_model.predict(frame)
         label_1, label_2 = self.label_model.predict(frame)
+        log.info(f'Predicting time: {time.monotonic() - initial_time}')
         return (polyline_widths, polyline_height), (label_1, label_2)
 
     def postprocess_frame(self, polylines: Tuple[np.ndarray, np.ndarray], labels: Tuple[np.ndarray], width: int,
@@ -166,6 +170,7 @@ if __name__ == '__main__':
     NUM_TYPE_OF_LINES = int(os.getenv('NUM_TYPE_OF_LINES'))
     NEURAL_NETWORK_WIDTH = int(os.getenv('NEURAL_NETWORK_WIDTH'))
     NEURAL_NETWORK_HEIGHT = int(os.getenv('NEURAL_NETWORK_HEIGHT'))
+    SAVE_IMAGE_PATH = '/Users/karim/Desktop/drawed_line_frame.jpg'
 
     frame_handler = FrameHandler(
         polyline_model_path=POLYLINE_NEURAL_NETWORK_MODEL_PATH,
@@ -179,30 +184,34 @@ if __name__ == '__main__':
         neural_net_height=NEURAL_NETWORK_WIDTH,
     )
 
+    initial_time = time.monotonic()
+
     initial_frame = cv2.imread(FRAME_PATH)
     initial_width = initial_frame.shape[1]
     initial_height = initial_frame.shape[0]
-    # cv2.imshow(f'Original frame', initial_frame)
     frame = frame_handler.preprocess_frame(initial_frame)
     polylines, labels = frame_handler.recognize(frame)
-    # polylines_small, colors_small = frame_handler.postprocess_frame(polylines=polylines, labels=labels,
-    #                                                                 width=NEURAL_NETWORK_WIDTH,
-    #                                                                 height=NEURAL_NETWORK_HEIGHT)
-    # small_result = frame_handler.draw_popylines(frame=frame, list_of_points=polylines_small,
-    #                                             list_of_colors=colors_small)
-    # cv2.imshow(f'Small frame', small_result)
     labels_probability = frame_handler.get_labels_probability(labels)
+    log.info(f'Line probabilities: {labels_probability}')
     full_polylines, full_colors = frame_handler.postprocess_frame(polylines=polylines, labels=labels,
                                                                   width=initial_frame.shape[1],
                                                                   height=initial_frame.shape[0])
-    coordinates = frame_handler.get_filled_polyline_coordinates(polylines=full_polylines)
-    full_result = frame_handler.draw_filled_polyline(frame=initial_frame, coordinates=coordinates)
-    full_result = frame_handler.draw_probability(frame=full_result, labels_probability=labels_probability)
-    full_result = frame_handler.draw_popylines(frame=full_result, list_of_points=full_polylines,
-                                               list_of_colors=full_colors)
-    cv2.imshow(f'Final frame', full_result)
+    if full_polylines[0].size != 0 and full_polylines[1].size != 0:
+        coordinates = frame_handler.get_filled_polyline_coordinates(polylines=full_polylines)
+        full_result = frame_handler.draw_filled_polyline(frame=initial_frame, coordinates=coordinates)
+        full_result = frame_handler.draw_probability(frame=full_result, labels_probability=labels_probability)
+        full_result = frame_handler.draw_popylines(frame=full_result, list_of_points=full_polylines,
+                                                   list_of_colors=full_colors)
+        cv2.imshow(f'Final frame', full_result)
 
-    presp_frame = transform_frame(full_result, initial_width, initial_height)
-    cv2.imshow('Perspective transform frame', presp_frame)
+        final_time = time.monotonic()
+        log.info(f'Image processing time: {final_time - initial_time} seconds.')
 
-    cv2.waitKey(1)
+        presp_frame = transform_frame(full_result, initial_width, initial_height)
+        cv2.imshow('Perspective transform frame', presp_frame)
+        # cv2.imwrite(SAVE_IMAGE_PATH, full_result)
+        cv2.waitKey(1)
+    else:
+        log.warning("Neural net didn't find any lines at the given frame")
+
+    log.info('Done!')
