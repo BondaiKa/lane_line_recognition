@@ -113,7 +113,7 @@ class FrameHandler(metaclass=MetaSingleton):
     @staticmethod
     def get_filled_polyline_coordinates(polylines: Tuple[np.ndarray]) -> Tuple[
         Tuple[int, int], Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
-        return np.array([polylines[1][-2], polylines[1][0], polylines[0][0], polylines[0][-2]])
+        return np.array([polylines[1][-4], polylines[1][0], polylines[0][0], polylines[0][-4]])
 
     @staticmethod
     def _concat_polyline(polyline_width: np.ndarray, polyline_height: np.ndarray) -> np.ndarray:
@@ -209,7 +209,7 @@ if __name__ == '__main__':
 
         presp_frame = transform_frame(full_result, initial_width, initial_height)
         cv2.imshow('Perspective transform frame', presp_frame)
-        # cv2.imwrite(SAVE_IMAGE_PATH, full_result)
+        cv2.imwrite(SAVE_IMAGE_PATH, full_result)
         cv2.waitKey(1)
     else:
         log.warning("Neural net didn't find any lines at the given frame")

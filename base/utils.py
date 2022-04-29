@@ -30,7 +30,8 @@ def concat_polyline(polyline_width: np.ndarray, polyline_height: np.ndarray) -> 
 
 
 def draw_polyline_in_frame(frame: np.ndarray, polylines: Tuple[np.ndarray, np.ndarray],
-                           thickness: int, max_lines_per_frame: int, input_shape: Tuple[int, int, int],idx=0) -> np.ndarray:
+                           thickness: int, max_lines_per_frame: int, input_shape: Tuple[int, int, int],
+                           idx=0) -> np.ndarray:
     copy_frame = np.copy(frame)
     polyline_widths, polyline_heights = polylines[0][idx], polylines[1][idx]
     polyline_width_list = np.split(polyline_widths, max_lines_per_frame)
@@ -51,14 +52,16 @@ def test_generator(generator, input_shape: Tuple[int, int, int],
                    max_lines_per_frame: int, draw_line=False, ) -> None:
     """Test frame and labels on generator"""
     original_frames, original_polylines = generator[0]
-    original_frame = original_frames[0]
+    # original_frame = original_frames[0]
 
-    draw_original_polylines_frame = draw_polyline_in_frame(
-        frame=original_frame,
-        polylines=original_polylines,
-        max_lines_per_frame=max_lines_per_frame,
-        input_shape=input_shape,
-        thickness=2
-    )
-    cv2_imshow(draw_original_polylines_frame * 255)
+    for idx, frame in enumerate(original_frames):
+        draw_original_polylines_frame = draw_polyline_in_frame(
+            frame=frame,
+            polylines=original_polylines,
+            max_lines_per_frame=max_lines_per_frame,
+            input_shape=input_shape,
+            thickness=2,
+            idx=idx
+        )
+        cv2.imshow(f'frame_{idx}', draw_original_polylines_frame)
     cv2.waitKey(0)
